@@ -6,7 +6,7 @@ import os from "node:os";
 import path from "node:path";
 import WebSocket from "ws";
 import {
-  bearerOf, capFor, cookieNameFor, cookieValueFor, createNonceStore, createToken, parseCookies, pidAlive,
+  COOKIE_NAME, bearerOf, capFor, legacyCookieNameFor, cookieValueFor, createNonceStore, createToken, parseCookies, pidAlive,
   readRuntimeFile, removeRuntimeFile, safeEqual, safeNext, writeRuntimeFile,
 } from "../src/auth.js";
 import { createServer, rawFetch } from "./helpers/authed-server.js";
@@ -24,7 +24,8 @@ test("tokens are 32 random bytes; safeEqual is exact and length-checked", () => 
   assert.equal(bearerOf(`bearer  ${a} `), a);
   assert.equal(bearerOf("Basic xyz"), null);
   assert.equal(parseCookies("a=1; see_plan_4388=v; b=2").get("see_plan_4388"), "v");
-  assert.equal(cookieNameFor(4388), "see_plan_4388");
+  assert.equal(COOKIE_NAME, "see-plan");
+  assert.equal(legacyCookieNameFor(4388), "see_plan_4388");
   assert.notEqual(cookieValueFor(a), a, "the cookie is derived, not the token itself");
 });
 
@@ -184,9 +185,9 @@ test("bearer and cookie both work; a wrong token of the same length is refused",
   assert.equal(refused.status, 401);
   assert.equal(JSON.parse(refused.text).error.code, "AUTH_REQUIRED");
   assert.match(JSON.parse(refused.text).error.message, /upgrade see-plan/);
-  const cookie = `${cookieNameFor(port)}=${cookieValueFor(srv.token)}`;
+  const cookie = `${COOKIE_NAME}=${cookieValueFor(srv.token)}`;
   assert.equal((await raw(port, `/api/${key}/status`, { headers: { cookie } })).status, 200);
-  assert.equal((await raw(port, `/api/${key}/status`, { headers: { cookie: `${cookieNameFor(port + 1)}=${cookieValueFor(srv.token)}` } })).status, 401, "another port's cookie name");
+  assert.equal((await raw(port, `/api/${key}/status`, { headers: { cookie: `${COOKIE_NAME}=${cookieValueFor(createToken())}` } })).status, 401, "a cookie from another key");
   const page = await raw(port, `/session/${key}`);
   assert.equal(page.status, 401);
   assert.match(page.text, /see-plan url/, "the 401 page says how to sign in");
@@ -195,7 +196,7 @@ test("bearer and cookie both work; a wrong token of the same length is refused",
 
 test("the sign-in link: a bearer-only nonce, once, then an HttpOnly SameSite=Strict cookie and a 303", async (t) => {
   const { srv, port, key } = await setup(t, { nonceTtlMs: 200 });
-  const cookie = `${cookieNameFor(port)}=${cookieValueFor(srv.token)}`;
+  const cookie = `${COOKIE_NAME}=${cookieValueFor(srv.token)}`;
   assert.equal((await raw(port, "/api/auth/nonce", { method: "POST", headers: { cookie } })).status, 401, "a cookie cannot mint sign-in links");
   const mint = async () => JSON.parse((await raw(port, "/api/auth/nonce", { method: "POST", headers: { authorization: `Bearer ${srv.token}` } })).text).nonce;
   const nonce = await mint();
@@ -206,7 +207,7 @@ test("the sign-in link: a bearer-only nonce, once, then an HttpOnly SameSite=Str
   assert.equal(ok.status, 303);
   assert.equal(ok.headers.location, `/session/${key}`);
   const set = String(ok.headers["set-cookie"]);
-  assert.match(set, new RegExp(`^${cookieNameFor(port)}=[0-9a-f]{64}; HttpOnly; SameSite=Strict; Path=/; Max-Age=\\d+$`));
+  assert.match(set, new RegExp(`^${COOKIE_NAME}=[0-9a-f]{64}; HttpOnly; SameSite=Strict; Path=/; Max-Age=\\d+$`));
   assert.ok(!set.includes(srv.token), "the cookie is not the token");
   assert.equal((await raw(port, `/auth?t=${nonce}&next=${next}`)).status, 401, "used once");
   const late = await mint();
@@ -226,9 +227,9 @@ test("the WebSocket upgrade needs the cookie (or the bearer)", async (t) => {
     ws.once("error", () => resolve("error"));
   });
   assert.equal(await attempt({}), 401);
-  assert.equal(await attempt({ cookie: `${cookieNameFor(port)}=${cookieValueFor(srv.token)}` }), "open");
+  assert.equal(await attempt({ cookie: `${COOKIE_NAME}=${cookieValueFor(srv.token)}` }), "open");
   assert.equal(await attempt({ authorization: `Bearer ${srv.token}` }), "open");
-  assert.equal(await attempt({ cookie: `${cookieNameFor(port)}=nope` }), 401);
+  assert.equal(await attempt({ cookie: `${COOKIE_NAME}=nope` }), 401);
 });
 
 test("MY_LAVISH_ALLOWED_HOSTS: an unlisted host is 403, a listed one still needs the token; https forwarders get Secure", async (t) => {
@@ -275,9 +276,9 @@ test("the browser key is saved once and reused, so a restart keeps the browser s
 test("a cookie made from the browser key still works after the server restarts with a new token", async (t) => {
   const key = createToken();
   const { srv, port, key: sessionKey } = await setup(t, { browserKey: key });
-  const cookie = `${cookieNameFor(port)}=${cookieValueFor(key)}`;
+  const cookie = `${COOKIE_NAME}=${cookieValueFor(key)}`;
   assert.equal((await raw(port, `/api/${sessionKey}/status`, { headers: { cookie } })).status, 200);
-  assert.equal((await raw(port, `/api/${sessionKey}/status`, { headers: { cookie: `${cookieNameFor(port)}=${cookieValueFor(srv.token)}` } })).status, 401, "the per-start token no longer makes the cookie");
+  assert.equal((await raw(port, `/api/${sessionKey}/status`, { headers: { cookie: `${COOKIE_NAME}=${cookieValueFor(srv.token)}` } })).status, 401, "the per-start token no longer makes the cookie");
 });
 
 test("the sign-in page shows the most recent session by file name only, and whether Claude is connected", async (t) => {
@@ -289,4 +290,74 @@ test("the sign-in page shows the most recent session by file name only, and whet
   assert.ok(!page.text.includes(tmp), "the folder path is never shown");
   assert.match(page.text, /Claude is not connected/);
   assert.match(page.text, /see-plan url/);
+});
+
+test("a failed key save warns once without the key; a key older than 30 days is replaced", async (t) => {
+  const { loadBrowserKey, BROWSER_KEY_FILE, BROWSER_KEY_MAX_AGE_MS } = await import("../src/auth.js");
+  const dir = await fs.promises.mkdtemp(path.join(os.tmpdir(), "mla-bk2-"));
+  t.after(() => fs.promises.rm(dir, { recursive: true, force: true }));
+  const acl = { execFileFn: (c, a, o, cb) => cb(null) };
+  const blocker = path.join(dir, "file");
+  await fs.promises.writeFile(blocker, "x");
+  const warnings = [];
+  const oneStart = await loadBrowserKey(path.join(blocker, "sub"), { ...acl, onWarning: (m) => warnings.push(m) });
+  assert.equal(warnings.length, 1);
+  assert.match(warnings[0], /browser-key not saved/);
+  assert.ok(!warnings[0].includes(oneStart), "the warning never contains the key");
+
+  const first = await loadBrowserKey(dir, acl);
+  assert.equal(await loadBrowserKey(dir, { ...acl, now: () => Date.now() + BROWSER_KEY_MAX_AGE_MS - 60000 }), first, "29 days old is kept");
+  const replaced = await loadBrowserKey(dir, { ...acl, now: () => Date.now() + BROWSER_KEY_MAX_AGE_MS + 60000 });
+  assert.notEqual(replaced, first, "older than 30 days is replaced");
+  assert.equal((await fs.promises.readFile(path.join(dir, BROWSER_KEY_FILE), "utf8")).trim(), replaced);
+});
+
+test("one cookie name for every port: a server on a new port accepts the same cookie", async (t) => {
+  const key = createToken();
+  const a = await setup(t, { browserKey: key });
+  const b = await setup(t, { browserKey: key });
+  assert.notEqual(a.port, b.port);
+  const cookie = `${COOKIE_NAME}=${cookieValueFor(key)}`;
+  assert.equal((await raw(a.port, `/api/${a.key}/status`, { headers: { cookie } })).status, 200);
+  assert.equal((await raw(b.port, `/api/${b.key}/status`, { headers: { cookie } })).status, 200, "the restart on another port keeps the browser signed in");
+});
+
+test("a 4.0.x cookie is accepted once and replaced by the new name", async (t) => {
+  const key = createToken();
+  const { port, key: sessionKey } = await setup(t, { browserKey: key });
+  const res = await raw(port, `/api/${sessionKey}/status`, { headers: { cookie: `${legacyCookieNameFor(port)}=${cookieValueFor(key)}` } });
+  assert.equal(res.status, 200);
+  const set = [].concat(res.headers["set-cookie"] ?? []);
+  assert.ok(set.some((c) => c.startsWith(`${COOKIE_NAME}=${cookieValueFor(key)};`)), "the new cookie is issued");
+  assert.ok(set.some((c) => c.startsWith(`${legacyCookieNameFor(port)}=;`) && c.includes("Max-Age=0")), "the old one is expired");
+  assert.equal((await raw(port, `/api/${sessionKey}/status`, { headers: { cookie: `${legacyCookieNameFor(port)}=nope` } })).status, 401, "a wrong old cookie is refused");
+});
+
+test("rotate (bearer only) signs out every browser at once", async (t) => {
+  const key = createToken();
+  let saved = null;
+  const { srv, port, key: sessionKey } = await setup(t, { browserKey: key, rotateBrowserKey: async () => (saved = createToken()) });
+  const cookie = `${COOKIE_NAME}=${cookieValueFor(key)}`;
+  assert.equal((await raw(port, "/api/auth/rotate", { method: "POST", headers: { cookie } })).status, 401, "a browser cannot rotate");
+  const res = await raw(port, "/api/auth/rotate", { method: "POST", headers: { authorization: `Bearer ${srv.token}` } });
+  assert.equal(res.status, 200);
+  assert.ok(saved, "the new key went through rotateBrowserKey (saved to disk by the CLI)");
+  assert.equal((await raw(port, `/api/${sessionKey}/status`, { headers: { cookie } })).status, 401, "the old cookie is refused now");
+  assert.equal((await raw(port, `/api/${sessionKey}/status`, { headers: { cookie: `${COOKIE_NAME}=${cookieValueFor(saved)}` } })).status, 200);
+});
+
+test("Sign out clears this browser's cookie and ends the agent's poll with signed_out", async (t) => {
+  const key = createToken();
+  const { srv, port, baseUrl, file } = await setup(t, { browserKey: key });
+  const cookie = `${COOKIE_NAME}=${cookieValueFor(key)}`;
+  const poll = fetch(`${baseUrl}/api/poll`, { method: "POST", headers: { "content-type": "application/json", authorization: `Bearer ${srv.token}` }, body: JSON.stringify({ file, timeoutMs: 5000 }) }).then((r) => r.json());
+  await new Promise((r) => setTimeout(r, 100));
+  const out = await raw(port, "/api/auth/signout", { method: "POST", headers: { cookie, origin: `http://127.0.0.1:${port}` } });
+  assert.equal(out.status, 303);
+  assert.equal(out.headers.location, "/");
+  assert.ok([].concat(out.headers["set-cookie"]).some((c) => c.startsWith(`${COOKIE_NAME}=;`) && c.includes("Max-Age=0")));
+  const polled = await poll;
+  assert.equal(polled.status, "ended");
+  assert.equal(polled.ended_by, "signed_out");
+  assert.equal((await raw(port, "/api/auth/signout", { method: "POST", headers: { cookie, origin: "http://evil.example" } })).status, 403, "cross-site sign out is refused");
 });

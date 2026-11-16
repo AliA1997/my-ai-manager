@@ -16,7 +16,7 @@ import { serverSpawnArgs } from "./assets.js";
 import { VERSION } from "./version.js";
 import { pathRows, readConfig, resolvePaths } from "./paths.js";
 import { startServerProcess } from "./server-launcher.js";
-import { createToken, loadBrowserKey, readRuntimeFile, removeRuntimeFile, writeRuntimeFile } from "./auth.js";
+import { createToken, loadBrowserKey, rotateBrowserKey, readRuntimeFile, removeRuntimeFile, writeRuntimeFile } from "./auth.js";
 import { createConsoleLog } from "./console-log.js";
 import { createErrorStore, errorSearchEnabled, pineconeSettings } from "./error-store.js";
 import { DESIGN_TEXT, PLAYBOOKS, HOME_USAGE } from "./guidance.js";
@@ -154,7 +154,9 @@ export function createPollOutput({ file, response, errorLogFile = resolvePaths()
     const extra = stageStep(response.stage, { planFile: response.workflow?.plan_file });
     if (extra && !response.session_ended) out.next_step += ` ${extra}`;
   } else if (status === "ended") {
-    out.next_step = "The session is ended. Stop polling and do not reopen it unless the user asks.";
+    out.next_step = response.ended_by === "signed_out"
+      ? "The user signed out of see-plan, which disconnected you. Stop polling and do not reopen the session unless the user asks."
+      : "The session is ended. Stop polling and do not reopen it unless the user asks.";
   } else if (status === "waiting") {
     if (response.reconnect) out.session.reconnect = true;
     out.next_step = response.reconnect
@@ -850,6 +852,24 @@ async function cmdStop(io) {
   return { ok: true, stopped: true, next_step: "Server stopped. Any command that needs it starts it again." };
 }
 
+/** Signs out every browser: a new browser key, through the running server when there is one (it applies at once). */
+async function cmdLogout(io) {
+  const { port, stateDir, paths } = configOf(io.env);
+  const baseUrl = `http://127.0.0.1:${port}`;
+  const probe = await probeHealth(baseUrl);
+  if (probe.up && probe.health?.app === APP && probe.health.auth === "token") {
+    const rt = await readRuntimeFile(paths.runtimeDir, { port });
+    if (!rt.ok) throw tokenUnreadable(rt, paths, port);
+    const res = await api({ baseUrl, token: rt.data.token }, "POST", "/api/auth/rotate", { body: {}, timeoutMs: 10000 });
+    if (res.status !== 200) throw httpError(res, "");
+    return { ok: true, signed_out: "all browsers", server: "running", next_step: "Every browser is signed out. Run `see-plan url` to sign one in again." };
+  }
+  let warning = null;
+  await rotateBrowserKey(stateDir, { onWarning: (m) => (warning = m) });
+  if (warning) throw new CliError("INTERNAL", warning, "Check that the state folder is writable, then run `see-plan logout` again.");
+  return { ok: true, signed_out: "all browsers", server: "stopped", next_step: "Every browser is signed out. Run `see-plan url` to sign one in again." };
+}
+
 const SERVER_MODES = new Set(["window", "tmux", "hidden"]);
 
 async function cmdServer(io) {
@@ -857,7 +877,8 @@ async function cmdServer(io) {
   await fs.promises.mkdir(stateDir, { recursive: true });
   const mode = SERVER_MODES.has(io.env.SEE_PLAN_SERVER_MODE) ? io.env.SEE_PLAN_SERVER_MODE : "foreground";
   const token = createToken();
-  const browserKey = await loadBrowserKey(stateDir);
+  const browserKey = await loadBrowserKey(stateDir, { onWarning: (m) => io.stderr.write(`see-plan: warning: ${m}
+`) });
   const store = new SessionStore(stateDir);
   // S4: a readable console log when a person watches (window, tmux, `see-plan server` by hand), mirrored to
   // server.log. Hidden mode already writes stderr to server.log. Secrets are redacted defensively.
@@ -869,6 +890,7 @@ async function cmdServer(io) {
   const errorStore = await createErrorStore({ file: errorLogFile, env: io.env, log: consoleLog.log, appVersion: VERSION });
   const server = createServer({
     store, stateDir, port, idleTimeoutMs, exitOnIdle: true, version: VERSION, errorLogFile, errorStore, errorSearch: errorSearchEnabled(io.env), logDir, token, browserKey,
+    rotateBrowserKey: () => rotateBrowserKey(stateDir, { onWarning: (m) => consoleLog.log(`warning: ${m}`) }),
     allowedHosts: allowedHostsOf(io.env),
     launcherConfig: launcherSettings(io.env, readConfig(paths)),
     log: consoleLog.log,
@@ -1243,6 +1265,7 @@ export async function run(argv, io = { stdout: process.stdout, stderr: process.s
     else if (first === "feature") result = await cmdFeature(second, positional[2], flags, io);
     else if (first === "prune") result = await cmdPrune(flags, io);
     else if (first === "stop") result = await cmdStop(io);
+    else if (first === "logout") result = await cmdLogout(io);
     else if (first === "logs") result = await cmdLogs(flags, io);
     else if (first === "error-logs") result = await cmdErrorLogs(flags, io);
     else if (first === "errors") result = await cmdErrors(second, positional.slice(2), flags, io);

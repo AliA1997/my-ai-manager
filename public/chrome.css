@@ -1193,3 +1193,5 @@ body.ended #decisionBar {
 .severity-option .sev-hint { grid-area: hint; color: var(--muted); font-size: 12px; }
 .severity-picker.compact .sev-hint { display: none; }
 .saved-severity { margin: 8px 0; }
+
+.signout{display:inline;margin:0}

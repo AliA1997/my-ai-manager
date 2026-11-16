@@ -588,3 +588,37 @@ test("migrate refuses when the new location already has data, and stops a runnin
   assert.equal(await run(["migrate", "--dry-run", "--json"], refused.io), 0);
   assert.ok(!JSON.parse(refused.stdout()).would_migrate?.some((m) => m.what === "state"));
 });
+
+test("a poll ended by Sign out tells the agent it was disconnected", () => {
+  const out = createPollOutput({ file: "plan.html", response: { status: "ended", ended_by: "signed_out" }, errorLogFile: "e.json" });
+  assert.equal(out.session.ended_by, "signed_out");
+  assert.match(out.next_step, /signed out/);
+  assert.match(out.next_step, /Stop polling/);
+});
+
+test("logout signs out every browser, with and without a running server", async (t) => {
+  const { BROWSER_KEY_FILE } = await import("../src/auth.js");
+  const dir = await fs.promises.mkdtemp(path.join(os.tmpdir(), "mla-logout-"));
+  const env = { ...process.env, MY_LAVISH_STATE_DIR: dir, MY_LAVISH_PORT: String(await freePort()), MY_LAVISH_NO_OPEN: "1" };
+  t.after(async () => {
+    await run(["stop"], fakeIo(env).io).catch(() => {});
+    await fs.promises.rm(dir, { recursive: true, force: true }).catch(() => {});
+  });
+  const keyFile = path.join(dir, BROWSER_KEY_FILE);
+  const read = () => fs.promises.readFile(keyFile, "utf8").then((s) => s.trim(), () => null);
+
+  const offline = fakeIo(env);
+  assert.equal(await run(["logout", "--json"], offline.io), 0);
+  assert.equal(JSON.parse(offline.stdout()).server, "stopped");
+  const k1 = await read();
+  assert.match(k1, /^[A-Za-z0-9_-]{43}$/);
+
+  const file = path.join(dir, "page.html");
+  await fs.promises.writeFile(file, "<html><body>hi</body></html>");
+  assert.equal(await run(["open", file, "--json"], fakeIo(env).io), 0);
+  const online = fakeIo(env);
+  assert.equal(await run(["logout", "--json"], online.io), 0);
+  assert.equal(JSON.parse(online.stdout()).server, "running");
+  const k2 = await read();
+  assert.notEqual(k2, k1, "the running server saved a new key");
+});

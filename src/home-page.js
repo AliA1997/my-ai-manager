@@ -27,6 +27,7 @@ export function createHomeHtml({ baseUrl } = {}) {
     <a href="/claude">Claude logs</a>
     <a href="/errors">Error logs</a>
     <button id="newFeature" type="button" class="primary">+ New feature</button>
+    <form class="signout" method="post" action="/api/auth/signout" title="Sign out this browser and disconnect the agent"><button type="submit">Sign out</button></form>
   </nav>
 </header>
 <p id="status" role="status" aria-live="polite"></p>

@@ -22,7 +22,7 @@ const FIXTURES = {
 
 test("detectEnvironment: a table of places see-plan runs", () => {
   for (const [name, f] of Object.entries(FIXTURES)) {
-    const e = detectEnvironment({ env: f.env, platform: f.platform, exists: f.exists ?? none });
+    const e = detectEnvironment({ env: f.env, platform: f.platform, exists: f.exists ?? none, readFile: () => "" });
     for (const k of ["gui", "remote", "container", "wsl", "tmux", "ci"]) {
       if (k in f) assert.equal(e[k], f[k], `${name}: ${k}`);
     }
@@ -115,4 +115,15 @@ test("launchClaude: headless picks copy, tmux opens a detached window, off refus
   await launchClaude({ file: "/r/p.md", cwd: "/r", sessionId: ID, environment: desk, config: { terminal: ["wezterm", "start", "--", "{cmd...}"] } }, { platform: "linux", spawnFn: fakeSpawn(custom), findClaude: find });
   assert.equal(custom[0].command, "wezterm");
   assert.deepEqual(custom[0].args.slice(0, 5), ["start", "--", "/usr/bin/claude", "--session-id", ID]);
+});
+
+test("WSL is found from /proc/version when WSL_DISTRO_NAME was dropped (sudo, env -i)", () => {
+  const none = () => false;
+  const msKernel = () => "Linux version 5.15.167.4-microsoft-standard-WSL2 (root@host) #1 SMP";
+  const wsl = detectEnvironment({ env: {}, platform: "linux", exists: none, readFile: msKernel });
+  assert.equal(wsl.wsl, true);
+  assert.ok(wsl.reasons.some((r) => /proc\/version/.test(r)));
+  assert.equal(canOpenBrowser(wsl), true);
+  assert.equal(detectEnvironment({ env: {}, platform: "linux", exists: none, readFile: () => "Linux version 6.8.0-generic" }).wsl, false);
+  assert.equal(detectEnvironment({ env: {}, platform: "darwin", exists: none, readFile: msKernel }).wsl, false, "only Linux reads it");
 });

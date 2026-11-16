@@ -18,19 +18,28 @@ export function createToken() {
 export const BROWSER_KEY_FILE = "browser-key";
 /** How long a signed-in browser stays signed in, restarts included (30 days). */
 export const COOKIE_MAX_AGE_S = 30 * 24 * 3600;
+/** A saved key older than this is replaced at startup, so no cookie outlives the key behind it. */
+export const BROWSER_KEY_MAX_AGE_MS = COOKIE_MAX_AGE_S * 1000;
 
 /**
  * The browser's long-lived secret: read from `<dir>/browser-key`, or made and saved there (mode 0600, a
  * user-only ACL on Windows). The cookie is derived from it, so a signed-in browser stays signed in across
- * server restarts instead of landing on the sign-in screen. The CLI token is still new on every start. If
- * the file cannot be written, a one-start key is returned and the old behaviour applies.
+ * server restarts instead of landing on the sign-in screen. The CLI token is still new on every start.
+ * A key older than `maxAgeMs` is replaced. If the file cannot be written, a one-start key is returned and
+ * `onWarning` gets a one-line message (never the key).
  */
-export async function loadBrowserKey(dir, { platform = process.platform, execFileFn } = {}) {
+export async function loadBrowserKey(dir, { platform = process.platform, execFileFn, now = Date.now, maxAgeMs = BROWSER_KEY_MAX_AGE_MS, onWarning } = {}) {
   const file = path.join(dir, BROWSER_KEY_FILE);
   try {
-    const v = (await fs.promises.readFile(file, "utf8")).trim();
-    if (/^[A-Za-z0-9_-]{43}$/.test(v)) return v;
+    const [v, st] = await Promise.all([fs.promises.readFile(file, "utf8"), fs.promises.stat(file)]);
+    if (/^[A-Za-z0-9_-]{43}$/.test(v.trim()) && now() - st.mtimeMs < maxAgeMs) return v.trim();
   } catch {}
+  return rotateBrowserKey(dir, { platform, execFileFn, onWarning });
+}
+
+/** Makes and saves a new browser key, which signs out every browser. Returns the new key. */
+export async function rotateBrowserKey(dir, { platform = process.platform, execFileFn, onWarning } = {}) {
+  const file = path.join(dir, BROWSER_KEY_FILE);
   const key = createToken();
   try {
     await fs.promises.mkdir(dir, { recursive: true, mode: 0o700 });
@@ -38,7 +47,9 @@ export async function loadBrowserKey(dir, { platform = process.platform, execFil
     await fs.promises.writeFile(tmp, key, { mode: 0o600 });
     if (platform === "win32") await icacls(tmp, { execFileFn });
     await renameWithRetry(tmp, file);
-  } catch {}
+  } catch (e) {
+    onWarning?.(`browser-key not saved (${e.code ?? e.message}): browsers will need to sign in again after a restart`);
+  }
   return key;
 }
 
@@ -58,13 +69,16 @@ export function capFor(token, key) {
   return hmac(token, `artifact:${key}`).slice(0, CAP_HEX);
 }
 
-/** The browser cookie value: derived from the token, so it is useless once the server restarts. */
-export function cookieValueFor(token) {
-  return hmac(token, "cookie");
+/** The browser cookie value, derived from the browser key: it stays valid until the key is replaced. */
+export function cookieValueFor(browserKey) {
+  return hmac(browserKey, "cookie");
 }
 
-/** The cookie name includes the port: 127.0.0.1 cookies are shared across ports. */
-export function cookieNameFor(port) {
+/** One cookie name for every port, so a server on a new port keeps the browser signed in. */
+export const COOKIE_NAME = "see-plan";
+
+/** The 4.0.x cookie name, which included the port. Accepted once and replaced with COOKIE_NAME. */
+export function legacyCookieNameFor(port) {
   return `see_plan_${port}`;
 }
 

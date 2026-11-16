@@ -295,3 +295,5 @@ dialog textarea { width: 100%; font: inherit; padding: 6px; border: 1px solid va
 .col-actions {
   white-space: nowrap;
 }
+
+.signout{display:inline;margin:0}

@@ -163,6 +163,7 @@ export function createChromeHtml(session, { baseUrl, canResume = false, workflow
             <button id="commentPlan" type="button" role="menuitem">Comment on the whole plan</button>
             <button id="sendAndEnd" type="button" role="menuitem">Send &amp; End</button>
             <button id="endSession" type="button" role="menuitem" class="danger">End session</button>
+            <form class="signout" method="post" action="/api/auth/signout" target="_top"><button type="submit" role="menuitem" title="Sign out this browser and disconnect the agent">Sign out</button></form>
           </span>
         </span>
         <button id="send" type="button" class="primary">Send to Agent</button>

@@ -141,5 +141,6 @@ export const HOME_USAGE = [
   "see-plan paths                every folder and file see-plan uses (state, error log, logs, runtime) and why (--json)",
   "see-plan migrate              move the legacy ~/.my-lavish-axi and ~/claude-errors data to the platform standard (--dry-run)",
   "see-plan stop                 stop the local server",
+  "see-plan logout               sign out every browser (a new browser key)",
   "flags: --json, --no-open, --reopen, --with-claude, --agent, --stage <name>, --claude-session <id>, --timeout-ms <ms>, --agent-reply <text>, --agent-reply-file <file|->, --requirements <file|->, --dir <dir>, --limit <n>, --context <name>, --severity <name>, --dry-run, --version, --help",
 ].join("\n");
