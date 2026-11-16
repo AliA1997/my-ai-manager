@@ -53,7 +53,7 @@ export function createErrorsHtml({ baseUrl, project = null, recentProjects = [],
     <p class="eyebrow">see-plan</p>
     <h1>${project ? "Error logs" : "Recent sessions"}</h1>
   </div>
-  <nav aria-label="Pages"><a href="/">Dashboard</a> <a href="/claude${escapeHtml(q)}">Claude logs</a></nav>
+  <nav aria-label="Pages"><a href="/">Dashboard</a> <a href="/claude${escapeHtml(q)}">Claude logs</a> <form class="signout" method="post" action="/api/auth/signout" title="Sign out this browser and disconnect the agent"><button type="submit">Sign out</button></form></nav>
 </header>
 ${scopeLine({ project, recentProjects, unknownProject })}
 <p id="status" role="status" aria-live="polite"></p>

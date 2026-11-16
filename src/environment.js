@@ -10,12 +10,13 @@ const PLATFORMS = ["win32", "darwin", "linux", "freebsd", "openbsd", "sunos", "a
  * Returns { platform, gui, remote, container, wsl, tmux, ci, reasons[], tmux_socket }; `reasons` explain a
  * false `gui` and the other flags in words a person can act on.
  */
-export function detectEnvironment({ env = process.env, platform = process.platform, exists = fs.existsSync } = {}) {
+export function detectEnvironment({ env = process.env, platform = process.platform, exists = fs.existsSync, readFile = readSmall } = {}) {
   const reasons = [];
   const ssh = Boolean(env.SSH_CONNECTION || env.SSH_TTY);
   const remote = ssh || Boolean(env.CODESPACES || env.REMOTE_CONTAINERS || env.GITPOD_WORKSPACE_ID);
   const container = platform === "linux" && (exists("/.dockerenv") || exists("/run/.containerenv") || Boolean(env.container));
-  const wsl = Boolean(env.WSL_DISTRO_NAME);
+  // sudo, `env -i` and services drop WSL_DISTRO_NAME; the kernel version still names Microsoft.
+  const wsl = Boolean(env.WSL_DISTRO_NAME) || (platform === "linux" && /microsoft/i.test(readFile("/proc/version")));
   const tmux = Boolean(env.TMUX);
   const ci = Boolean(env.CI) && env.CI !== "false" && env.CI !== "0";
   let gui;
@@ -34,10 +35,18 @@ export function detectEnvironment({ env = process.env, platform = process.platfo
   if (env.REMOTE_CONTAINERS) reasons.push("running in a VS Code dev container");
   if (env.GITPOD_WORKSPACE_ID) reasons.push("running in Gitpod");
   if (container) reasons.push("running in a container");
-  if (wsl) reasons.push(`running in WSL (${env.WSL_DISTRO_NAME})`);
+  if (wsl) reasons.push(env.WSL_DISTRO_NAME ? `running in WSL (${env.WSL_DISTRO_NAME})` : "running in WSL (from /proc/version)");
   if (tmux) reasons.push("running inside tmux");
   const socket = tmux ? String(env.TMUX).split(",")[0] : null;
   return { platform, gui, remote, container, wsl, tmux, ci, reasons, tmux_socket: socket && TMUX_SOCKET.test(socket) ? socket : null };
+}
+
+function readSmall(file) {
+  try {
+    return fs.readFileSync(file, "utf8").slice(0, 512);
+  } catch {
+    return "";
+  }
 }
 
 /** A browser can be opened: a desktop, or WSL (through wslview / explorer.exe on the Windows side). */

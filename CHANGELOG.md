@@ -4,6 +4,20 @@
 
 The rest of the 2026-11-03 plan (`docs/superpowers/plans/2026-11-03-logs-sessions-plans-fixes.md`, Tasks 2–4): log hand-off, session management and plan management. Its stage inference for plan folders and its Claude-session cache shipped early (0.3.0, and again in 3.2.0).
 
+## [4.1.0] - unreleased
+
+Sign out, and signed-in browsers that can be revoked. Not breaking: 4.0.x browsers stay signed in.
+
+### Added
+- **Sign out** in the nav of every page (and the session panel's More menu): signs this browser out and disconnects the agent. Its poll returns `ended_by: "signed_out"` and tells it to stop. Unsent notes stay in history.
+- **`see-plan logout`:** signs out every browser by making a new browser key. With a server running it goes through `POST /api/auth/rotate` (bearer only) and applies at once.
+
+### Changed
+- **One cookie, `see-plan`,** for every port, so a server on a new port keeps the browser signed in. A 4.0.x `see_plan_<port>` cookie is accepted once and replaced.
+- **The browser key is replaced after 30 days** at startup, so no cookie outlives its key.
+- **A key that cannot be saved** now prints a one-line warning at startup instead of failing silently.
+- **WSL detection** falls back to `/proc/version` when `WSL_DISTRO_NAME` is missing (sudo, `env -i`, services).
+
 ## [4.0.1] - 2026-11-11
 
 A usability release: WSL support, a clearer dashboard, and fewer sign-in screens. Not breaking.

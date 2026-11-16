@@ -33,7 +33,7 @@ import { CONTENT_TYPES, PUBLIC_ASSETS, readAsset } from "./assets.js";
 import { createClaudeSessionLister, findLastPromptAt, findTranscript, readTranscript } from "./claude-log.js";
 import { buildPrompt, claudeStatus as realClaudeStatus, findRepoRoot, isClaudeSessionId, launchClaude as realLaunchClaude } from "./claude-launcher.js";
 import { escapeHtml } from "./markdown.js";
-import { COOKIE_MAX_AGE_S, bearerOf, capFor, cookieNameFor, cookieValueFor, createNonceStore, createToken, parseCookies, safeEqual, safeNext } from "./auth.js";
+import { COOKIE_MAX_AGE_S, bearerOf, capFor, COOKIE_NAME, legacyCookieNameFor, cookieValueFor, createNonceStore, createToken, parseCookies, safeEqual, safeNext } from "./auth.js";
 import { scheduleIdleWarnings } from "./console-log.js";
 import { detectEnvironment, parseEnvHeader } from "./environment.js";
 
@@ -153,6 +153,7 @@ export function createServer({
   claudeSessionTtlMs = 30000,
   projectHome = os.homedir(), // D9: never a project root (tests point it elsewhere)
   token = createToken(), // T2: every API call, page and WebSocket needs it (bearer or cookie); there is no off switch
+  rotateBrowserKey = null, // async () => new key: `see-plan logout` saves it so restarts agree
   browserKey = token, // the browser cookie is derived from this; the CLI passes a saved one so restarts keep browsers signed in
   allowedHosts = [], // H5: extra exact Host names (port forwarders); only ever added on top of the token check
   nonceTtlMs = 60000,
@@ -454,12 +455,15 @@ export function createServer({
 
   // ---- T5: the token (bearer for the CLI, cookie for the browser) ----
   const nonces = createNonceStore({ ttlMs: nonceTtlMs });
-  const cookieValue = cookieValueFor(browserKey);
+  let cookieValue = cookieValueFor(browserKey);
   let boundPort = port;
-  const cookieName = () => cookieNameFor(boundPort);
   const hasBearer = (req) => safeEqual(bearerOf(req.headers.authorization) ?? "", token);
-  const hasCookie = (req) => safeEqual(parseCookies(req.headers.cookie).get(cookieName()) ?? "", cookieValue);
+  const hasCookie = (req) => safeEqual(parseCookies(req.headers.cookie).get(COOKIE_NAME) ?? "", cookieValue);
+  /** A 4.0.x cookie (named after the port): accepted once, then replaced by COOKIE_NAME. */
+  const hasLegacyCookie = (req) => safeEqual(parseCookies(req.headers.cookie).get(legacyCookieNameFor(boundPort)) ?? "", cookieValue);
   const authed = (req) => hasBearer(req) || hasCookie(req);
+  const isHttps = (req) => req.seePlanForwarded === true && String(req.headers["x-forwarded-proto"] ?? "").split(",")[0].trim() === "https";
+  const cookieHeader = (req, name, value, maxAge) => `${name}=${value}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${maxAge}${isHttps(req) ? "; Secure" : ""}`;
   const publicPaths = new Set(PUBLIC_ASSETS.map((n) => `/${n}`));
   /** Open without a token: health, the login link, static files, and artifact frames (they carry a capability, T6). */
   function authExempt(req) {
@@ -525,6 +529,11 @@ code{background:rgba(127,127,127,.15);padding:2px 6px;border-radius:4px}ol{paddi
   // Token check, right after the Host allowlist. The Origin checks below stay as defence in depth.
   app.use(async (req, res, next) => {
     if (authExempt(req) || authed(req)) return next();
+    if (hasLegacyCookie(req)) {
+      res.append("Set-Cookie", cookieHeader(req, COOKIE_NAME, cookieValue, COOKIE_MAX_AGE_S));
+      res.append("Set-Cookie", cookieHeader(req, legacyCookieNameFor(boundPort), "", 0));
+      return next();
+    }
     const page = req.method === "GET" && !req.path.startsWith("/api/");
     if (page) {
       res.set("Cache-Control", "no-store");
@@ -562,9 +571,50 @@ code{background:rgba(127,127,127,.15);padding:2px 6px;border-radius:4px}ol{paddi
     res.set("Cache-Control", "no-store");
     res.set("Referrer-Policy", "no-referrer");
     if (!nonces.consume(req.query.t)) return res.status(401).type("html").send(unauthorizedPage(await recentSessionSummary()));
-    const https = req.seePlanForwarded === true && String(req.headers["x-forwarded-proto"] ?? "").split(",")[0].trim() === "https";
-    res.set("Set-Cookie", `${cookieName()}=${cookieValue}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${COOKIE_MAX_AGE_S}${https ? "; Secure" : ""}`);
+    res.set("Set-Cookie", cookieHeader(req, COOKIE_NAME, cookieValue, COOKIE_MAX_AGE_S));
     res.redirect(303, next);
+  });
+
+  // `see-plan logout` (bearer only): a new browser key, so every signed-in browser is signed out now.
+  app.post("/api/auth/rotate", async (req, res, next) => {
+    try {
+      if (!hasBearer(req)) return res.status(401).json(errorBody("AUTH_REQUIRED", "Only the see-plan CLI can sign out every browser"));
+      browserKey = rotateBrowserKey ? await rotateBrowserKey() : createToken();
+      cookieValue = cookieValueFor(browserKey);
+      log("browser key replaced: every browser is signed out");
+      res.json({ ok: true, rotated: true });
+    } catch (e) {
+      next(e);
+    }
+  });
+
+  // The page's Sign out: clears this browser's cookie and disconnects the agent from every open session.
+  app.post("/api/auth/signout", async (req, res, next) => {
+    try {
+      const ended = [];
+      for (const s of await store.listSessions()) {
+        if (s.status === "ended") continue;
+        try {
+          await store.endSession(s.key, "signed_out");
+        } catch {
+          continue;
+        }
+        agents.delete(s.key);
+        lastPresence.delete(s.key);
+        clearGrace(s.key);
+        events.emit("ended", s.key);
+        broadcast(s.key, { type: "ended", ended_by: "signed_out" });
+        ended.push(s.key);
+      }
+      if (ended.length) log(`signed out: ${ended.length} session(s) ended`);
+      res.append("Set-Cookie", cookieHeader(req, COOKIE_NAME, "", 0));
+      res.append("Set-Cookie", cookieHeader(req, legacyCookieNameFor(boundPort), "", 0));
+      res.set("Cache-Control", "no-store");
+      if (String(req.headers.accept ?? "").includes("application/json")) return res.json({ ok: true, signed_out: true, ended });
+      res.redirect(303, "/");
+    } catch (e) {
+      next(e);
+    }
   });
 
   app.post("/shutdown", (req, res) => {
