@@ -4,6 +4,19 @@
 
 The rest of the 2026-11-03 plan (`docs/superpowers/plans/2026-11-03-logs-sessions-plans-fixes.md`, Tasks 2–4): log hand-off, session management and plan management. Its stage inference for plan folders and its Claude-session cache shipped early (0.3.0, and again in 3.2.0).
 
+## [4.1.1] - unreleased
+
+Easier installs on locked-down Linux machines (no admin, company proxies, blocked downloads). Not breaking.
+
+### Changed
+- **`install.sh` never needs root** and now works with `wget` when `curl` is missing, checks with `sha256sum`, `shasum` or `openssl`, and falls back to a temp folder in `$HOME` when `/tmp` is not writable.
+- **Offline install:** `--from-file <archive> --sums SHA256SUMS` for machines where github.com is blocked.
+- **`--dir <path>`** (or `SEE_PLAN_INSTALL_DIR`) for a home folder that can't run programs; the installer runs the binary once and explains a noexec mount if it fails.
+- **Proxies and company CAs:** clear hints on a failed download; `SEE_PLAN_CA_BUNDLE` is passed to curl or wget.
+- **glibc check:** systems older than glibc 2.28 (RHEL/CentOS 7) get a clear message instead of a binary that can't start.
+- **PATH is added for you** in your shell profile (`--no-modify-path` to skip), as the README already promised.
+- **Linux arm64 build** in every release.
+
 ## [4.1.0] - 2026-11-15
 
 Sign out, and signed-in browsers that can be revoked. Not breaking: 4.0.x browsers stay signed in.

@@ -23,6 +23,9 @@ jobs:
           - os: ubuntu-latest
             target: linux-x64
             archive: tar.gz
+          - os: ubuntu-24.04-arm
+            target: linux-arm64
+            archive: tar.gz
           - os: macos-15
             target: macos-arm64
             archive: tar.gz

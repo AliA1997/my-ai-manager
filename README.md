@@ -16,7 +16,7 @@ This is a small re-implementation of the core loop of [lavish-axi](https://githu
 
 ### Install
 
-**1. One-line installer (recommended)** — downloads the latest release, checks its SHA-256, installs to `~/.see-plan/bin`, and puts it on your PATH. No Node.js needed.
+**1. One-line installer (recommended)** — downloads the latest release, checks its SHA-256, installs to `~/.see-plan/bin`, and puts it on your PATH. No Node.js, no admin rights, no sudo.
 
 ```powershell
 # Windows (PowerShell)
@@ -30,7 +30,31 @@ curl -fsSL https://github.com/AliA1997/my-lavish/releases/latest/download/instal
 
 To also install the Claude Code skill (`~/.claude/skills/my-lavish`): set `$env:SEE_PLAN_INSTALL_SKILL = "1"` before the PowerShell line, or append `-s -- --install-skill` to `sh`. Open a new terminal, then run `see-plan --version`.
 
-**2. Manual download** — grab `see-plan-<platform>.zip|tar.gz` from [Releases](https://github.com/AliA1997/my-lavish/releases), check it against `SHA256SUMS`, and put `see-plan` on your PATH. Builds: Windows x64, Linux x64, macOS arm64, macOS x64.
+**Locked-down Linux (no admin, company proxy, blocked sites).** The installer only writes under your home folder and never asks for sudo. It uses `curl` or `wget`, whichever exists, and checks the download with `sha256sum`, `shasum` or `openssl`.
+
+```sh
+# No curl? wget works too
+wget -qO- https://github.com/AliA1997/my-lavish/releases/latest/download/install.sh | sh
+
+# Behind a proxy, or a company CA that intercepts TLS
+export HTTPS_PROXY=http://proxy.example:8080
+export SEE_PLAN_CA_BUNDLE=/etc/pki/company-ca.pem
+curl -fsSL https://github.com/AliA1997/my-lavish/releases/latest/download/install.sh | sh
+
+# Piping to sh not allowed? Download, read, then run it
+curl -fsSLO https://github.com/AliA1997/my-lavish/releases/latest/download/install.sh && less install.sh && sh install.sh
+
+# github.com blocked on this machine: download install.sh, see-plan-linux-x64.tar.gz and SHA256SUMS
+# elsewhere, copy them over, then install offline (the checksum is still checked)
+sh install.sh --from-file see-plan-linux-x64.tar.gz --sums SHA256SUMS
+
+# Home folder can't run programs (noexec), or you want another place
+sh install.sh --dir /path/you/own/bin
+```
+
+Other options: `--version vX.Y.Z`, `--install-skill`, `--no-modify-path`. The Linux build needs glibc 2.28 or newer (RHEL/CentOS 8+, Ubuntu 18.10+, Debian 10+); on older systems the installer says so instead of installing a binary that can't start. Builds exist for Linux x64 and arm64.
+
+**2. Manual download** — grab `see-plan-<platform>.zip|tar.gz` from [Releases](https://github.com/AliA1997/my-lavish/releases), check it against `SHA256SUMS`, and put `see-plan` on your PATH. Builds: Windows x64, Linux x64, Linux arm64, macOS arm64, macOS x64.
 
 > **Windows SmartScreen:** the executable is not code-signed yet, so Windows may warn "Windows protected your PC" the first time. Choose **More info → Run anyway**, or install with npm instead. macOS builds are ad-hoc signed; if Gatekeeper blocks one, run `xattr -d com.apple.quarantine ~/.see-plan/bin/see-plan`.
 
@@ -243,7 +267,8 @@ see-plan follows each platform's standard folders. `see-plan paths` (or `see-pla
 | state (`state.json`, `revisions/`, `feedback.jsonl`) | `$XDG_STATE_HOME/see-plan` (`~/.local/state/see-plan`) | `~/Library/Application Support/see-plan` | `%LOCALAPPDATA%\see-plan\state` |
 | data (`error-log.json`) | `$XDG_DATA_HOME/see-plan` (`~/.local/share/see-plan`) | `~/Library/Application Support/see-plan` | `%LOCALAPPDATA%\see-plan\data` |
 | logs (`server.log`) | the state dir | `~/Library/Logs/see-plan` | `%LOCALAPPDATA%\see-plan\logs` |
-| runtime (`server.json`) | `$XDG_RUNTIME_DIR/see-plan`, else the state dir | the state dir | `%LOCALAPPDATA%\see-planun` |
+| runtime (`server.json`) | `$XDG_RUNTIME_DIR/see-plan`, else the state dir | the state dir | `%LOCALAPPDATA%\see-plan
+un` |
 | config (`config.json`, optional) | `$XDG_CONFIG_HOME/see-plan` | `~/Library/Application Support/see-plan` | `%APPDATA%\see-plan` |
 
 On macOS, `XDG_*` variables you set explicitly win over `~/Library`. A relative `XDG_*` value is ignored.
