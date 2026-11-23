@@ -1,0 +1,4 @@
+schema_version: "1.1"
+name: scaffolds-sessions-route
+expected_outcome: |
+  A route, component and skeleton are scaffolded from assets, no useEffect, and the scan and tests are run.

@@ -40,8 +40,11 @@ To also install the Claude Code skill (`~/.claude/skills/my-lavish`): set `$env:
 
 ```
 npm install
-npm link        # puts `see-plan` on your PATH; or run `node bin/see-plan.js <args>`
+npm run build:app   # builds the React pages into public/app (needed once, and after changing src/)
+npm link            # puts `see-plan` on your PATH; or run `node bin/see-plan.js <args>`
 ```
+
+The pages (dashboard, review, Claude logs, errors, notifications) are a React app. Until `npm run build:app` has run, the server answers `503` with that hint. `npm test` and `npm pack` run the build for you.
 
 Upgrading from 0.1: the command was renamed, so run `npm unlink -g my-lavish-axi` once.
 
@@ -51,15 +54,27 @@ A browser is needed only for the human side; use `--no-open` to skip launching i
 
 ### Quick start
 
+To open the dashboard (your sessions and features, recent errors, plans and the last 10 notifications):
+
 ```
 npm install
+npm start          # builds the pages, runs npm link if needed, opens the dashboard and keeps the server running here; press q or Ctrl+C to stop it
+```
+
+After that (`npm start` runs `npm link` for you when `see-plan` is not on your PATH yet), `see-plan` with no arguments does the same from any terminal. The dashboard's **Help** link lists every command. Agents open a plan with `see-plan <file>`; you do not need to.
+
+To open a plan yourself, and to run the tests:
+
+```
+npm install
+npm run build:app                          # once: builds the React pages
 npm test                                   # optional: unit tests
-node bin/see-plan.js examples/plan.html    # opens the page (or `see-plan ...` after npm link)
+node bin/see-plan.js examples/plan.html    # opens the review page (or `see-plan ...` after npm link)
 node bin/see-plan.js poll examples/plan.html   # in a second terminal: waits for your feedback
 node bin/see-plan.js stop                  # when done
 ```
 
-To see your Claude sessions, run `see-plan` with no file in a terminal (or `see-plan logs` from anywhere). The browser opens the **Claude log page** at `http://127.0.0.1:4388/claude`. No plan is shown. The top line is the newest Claude Code session's id and the date of its last prompt, and the page below is that session's log, updating live. **Recent sessions** switches to any of your 20 latest sessions. Click an entry to log it as an error: a dialog shows the entry, asks you to pick a **severity** and *Why is this an error?*, and **Log as error** adds it to the error log (`see-plan paths` shows where). `see-plan error-logs` lists everything logged (see [Error logs](#error-logs)).
+`see-plan` with no arguments opens the dashboard and no longer prints the command list: that is on the dashboard's **Help** page (`/help`), and `see-plan --help` prints it in the terminal. To see one Claude session's log, run `see-plan logs` from anywhere. The browser opens the **Claude log page** at `http://127.0.0.1:4388/claude`. No plan is shown. The top line is the newest Claude Code session's id and the date of its last prompt, and the page below is that session's log, updating live. **Recent sessions** switches to any of your 20 latest sessions. Click an entry to log it as an error: a dialog shows the entry, asks you to pick a **severity** and *Why is this an error?*, and **Log as error** adds it to the error log (`see-plan paths` shows where). `see-plan error-logs` lists everything logged (see [Error logs](#error-logs)).
 
 To attach a session from the command line instead, pass its id (the file name of a `~/.claude/projects/<project>/<id>.jsonl`):
 
@@ -88,6 +103,8 @@ see-plan poll examples/plan.html --agent-reply "Updated step 2."
 ```
 
 Finish with `see-plan end examples/plan.html`, and `see-plan stop` to shut down the background server.
+
+**Working on the pages:** edit `src/`, run `npm run build:app`, then `see-plan stop` and open the page again (the server lists the built files when it starts, so a rebuild needs a restart). Before you commit, run `npm run typecheck && npm run lint && npm run format:check`.
 
 ### Use it from an agent
 
@@ -233,6 +250,28 @@ Each error has a severity:
 | Send to IT | Malicious code, or work that ran without supervision. | Red velvet | required |
 
 Whether an error is a plan or a session error is worked out by the server when it is logged, from the Claude session id alone. Records logged before severities existed (0.2.x) show as **Unrated**; each can be given a severity once with **Rate…**. *Send to IT* is a label only: nothing is sent anywhere. Records are otherwise never edited.
+
+## The data folder (`data/`)
+
+The first time the server runs it creates `data/` in the folder it runs from, only when that folder is missing (`MY_LAVISH_DATA_DIR` moves it). Each domain has its own folder with `docstore.sqlite` (the records), `index.vec` (the local vector index, rebuilt from the records if lost) and `manifest.json`:
+
+| Folder | Holds |
+|---|---|
+| `data/errors/` | logged errors |
+| `data/notifications/` | notifications: a new error, a deletion, a download waiting, a size warning |
+| `data/sessions/` | Claude sessions seen by the Error logs page |
+| `data/plans/` | a project's plans seen by the Error logs page |
+| `data/config.json` | settings. JSON only, no vector index |
+
+`config.json` holds `deletionRule`, also editable on the **Notifications** page (`/notifications`). `threshold` counts records per domain (errors, sessions and plans):
+
+- `download-then-delete`: at the threshold a notification asks for a download; the records you download are then deleted.
+- `delete-oldest`: at the threshold the `deleteCount` oldest records are deleted, with no download.
+- `notify-only` (default, threshold 10000): nothing is deleted; a notification says the data keeps growing.
+
+Every deletion creates a notification, and so does every new error. The Error logs and Notifications pages share one filter (search by the local vector index, plus a select: severity on errors, type on notifications) and one pager. Needs Node 22.13 or later (`node:sqlite`). An old `error-log.json` is imported once and left in place.
+
+New top-level folders: `helpers/` (shared helpers, such as the data layer) and `data/` (runtime data, not committed).
 
 ## Where see-plan keeps its files
 

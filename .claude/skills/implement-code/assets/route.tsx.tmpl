@@ -1,0 +1,38 @@
+import { createFileRoute } from '@tanstack/react-router';
+import { Suspense } from 'react';
+import { {{Name}}Skeleton } from '../components/{{feature}}/{{Name}}Skeleton';
+import { {{Name}} } from '../components/{{feature}}/{{Name}}';
+
+// FE-11: every route has a loader (reads) and an action (writes). FE-10: no useEffect.
+export type {{Name}}Data = { items: ReadonlyArray<{ id: string; title: string }> };
+
+export async function load{{Name}}(): Promise<{{Name}}Data> {
+  const res = await fetch('/api/{{name}}');
+  if (!res.ok) throw new Error(`Failed to load {{name}}: ${res.status}`);
+  return res.json();
+}
+
+export async function act{{Name}}(input: { title: string }): Promise<void> {
+  const res = await fetch('/api/{{name}}', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) throw new Error(`Failed to save {{name}}: ${res.status}`);
+}
+
+export const Route = createFileRoute('/{{name}}')({
+  loader: load{{Name}},
+  pendingComponent: {{Name}}Skeleton, // UX-1: skeleton while the loader runs
+  component: function {{Name}}Page() {
+    const data = Route.useLoaderData();
+    return (
+      <main className="mx-auto max-w-3xl px-4 py-8">
+        <h1 className="mb-4 text-2xl font-semibold text-slate-900">{{Name}}</h1>
+        <Suspense fallback={<{{Name}}Skeleton />}>
+          <{{Name}} items={data.items} />
+        </Suspense>
+      </main>
+    );
+  },
+});

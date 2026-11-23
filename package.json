@@ -1,6 +1,6 @@
 {
   "name": "my-lavish-axi",
-  "version": "4.1.0",
+  "version": "4.2.0",
   "description": "Review an agent's plans as live, annotatable pages, and run features through Plan, Interrogation, Implementation and Verification stages with Claude.",
   "license": "MIT",
   "author": "AliA1997",
@@ -18,6 +18,7 @@
   },
   "files": [
     "bin",
+    "helpers",
     "src",
     "public",
     "skills",
@@ -26,26 +27,48 @@
     "README.md"
   ],
   "engines": {
-    "node": ">=22"
+    "node": ">=22.13"
   },
   "scripts": {
-    "test": "node --test",
+    "start": "node scripts/start.js",
+    "pretest": "npm run build:app",
+    "test": "node --import ./scripts/register-tsx.mjs --test",
     "smoke": "node scripts/smoke.js",
     "build:sea": "node scripts/build-sea.js",
     "smoke:bin": "node scripts/smoke.js --bin dist/see-plan",
     "smoke:workflow": "node scripts/smoke-workflow.js",
-    "licenses": "node scripts/third-party-licenses.js"
+    "licenses": "node scripts/third-party-licenses.js",
+    "typecheck": "tsc -p tsconfig.json",
+    "lint": "eslint --max-warnings 0 src",
+    "format:check": "prettier --check .",
+    "format": "prettier --write .",
+    "build:app": "node scripts/build-app.js",
+    "prepack": "npm run build:app"
   },
   "dependencies": {
     "@pinecone-database/pinecone": "9.2.0",
+    "@tanstack/react-query": "5.108.2",
+    "@tanstack/react-router": "1.170.46",
     "chokidar": "^4.0.3",
     "express": "^5.3.0",
     "marked": "^15.0.12",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
     "ws": "^8.22.0"
   },
   "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@tailwindcss/cli": "4.3.5",
+    "@types/node": "26.6.6",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
     "esbuild": "^0.25.11",
+    "eslint": "10.15.0",
     "mermaid": "11.17.2",
-    "postject": "^1.0.0-alpha.6"
+    "postject": "^1.0.0-alpha.6",
+    "prettier": "3.10.1",
+    "tailwindcss": "4.3.5",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.73.0"
   }
 }

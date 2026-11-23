@@ -1,0 +1,10 @@
+// Shared helper (BE-6, FE-13). One job per helper; export named functions.
+
+/** Describe what {{name}} does and what it returns (DX-7). */
+export function {{name}}(input: string): string {
+  // SEC-12: validate input at the boundary before using it.
+  if (typeof input !== 'string' || input.length === 0 || input.length > 1_000) {
+    throw new TypeError('{{name}}: input must be a non-empty string up to 1000 characters');
+  }
+  return input.trim();
+}

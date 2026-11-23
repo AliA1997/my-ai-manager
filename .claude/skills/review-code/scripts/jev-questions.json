@@ -1,0 +1,13 @@
+[
+  {"id":"SEC-1","q":"Does this file handle a request or action that changes data without checking on the server that the caller is allowed to?"},
+  {"id":"SEC-3","q":"Does this file build a SQL query, shell command or file path by joining strings that include user-controlled input?"},
+  {"id":"SEC-4","q":"Does this file put user-controlled or fetched data into HTML as markup without escaping or sanitizing it?"},
+  {"id":"SEC-8","q":"Does this file compare secrets or tokens with == or === instead of a constant-time comparison, or put a token in a URL?"},
+  {"id":"SEC-10","q":"Does this file write secrets, tokens or full request bodies to a log without redacting them?"},
+  {"id":"SEC-11","q":"Does this file make a server-side request to a URL that a user can supply, without checking the host?"},
+  {"id":"FE-11","q":"Is this a route component that lacks a loader for its data or an action for its updates?"},
+  {"id":"PERF-5","q":"Does this file create new objects, arrays or functions inline as props of a memoized child component?"},
+  {"id":"UX-1","q":"Does this file show a blank area or a bare spinner while loading data, instead of a skeleton shaped like the content?"},
+  {"id":"A11Y-2","q":"Does this file use an ARIA role or aria attribute on an element where a native HTML element would do the same job?"},
+  {"id":"A11Y-5","q":"Does this file render a form control that has no associated label?"}
+]

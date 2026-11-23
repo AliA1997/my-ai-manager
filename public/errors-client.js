@@ -12,7 +12,7 @@
   var PROJECT = document.body.getAttribute("data-project") || ""; // "" = sessions only (D13)
   var TABS = Array.prototype.slice.call(document.querySelectorAll('[role="tab"]')).map(function (t) { return t.getAttribute("data-tab"); });
   var CONTEXT = { "session-errors": "session", "plan-errors": "plan" };
-  var PAGE = 50;
+  var PAGE = 25;
   var REFRESH_MS = 30000;
   var EMPTY = {
     "session-errors": "No errors logged from sessions yet. Log one from the Claude log page.",
@@ -24,7 +24,7 @@
   var statusEl = document.getElementById("status");
   var tabs = TABS.map(function (id) { return document.getElementById("tab-" + id); });
   var state = {}; // tab id -> { loaded, filter, items, next_offset, total, busy }
-  TABS.forEach(function (id) { state[id] = { loaded: false, filter: "all", items: [], next_offset: null, total: 0, busy: false, seq: 0 }; });
+  TABS.forEach(function (id) { state[id] = { loaded: false, filter: "all", q: "", page: 1, pages: 1, items: [], total: 0, busy: false, seq: 0, ui: null }; });
   var summary = null;
   var active = null;
   var timer = null;
@@ -219,7 +219,7 @@
         }
         if (body && typeof body.plans === "number") setCount("plans", body.plans);
         ["session-errors", "plan-errors"].forEach(function (id) {
-          if (state[id].loaded) renderChips(id);
+          if (state[id].loaded) render(id);
         });
       })
       .catch(function (e) { setStatus("Could not load the counts: " + e.message, true); });
@@ -228,20 +228,21 @@
   // ---- loading ----
 
   // A fresh load (a filter change, a refresh) always runs and wins over one in flight; only "Load more" waits.
-  function load(id, more) {
+  function load(id) {
     var s = state[id];
-    if (more && s.busy) return;
     s.busy = true;
     var seq = ++s.seq;
     var stale = function () { return seq !== s.seq; };
     var request;
     if (CONTEXT[id]) {
-      var q = "?context=" + encodeURIComponent(CONTEXT[id]) + "&limit=" + PAGE + "&offset=" + (more ? s.next_offset || 0 : 0);
+      var q = "?context=" + encodeURIComponent(CONTEXT[id]) + "&pageSize=" + PAGE + "&page=" + s.page;
       if (s.filter !== "all") q += "&severity=" + encodeURIComponent(s.filter);
+      if (s.q) q += "&q=" + encodeURIComponent(s.q);
       request = getJson("/api/errors" + q).then(function (body) {
         if (stale()) return;
-        s.items = more ? s.items.concat(body.items || []) : body.items || [];
-        s.next_offset = body.next_offset;
+        s.items = body.items || [];
+        s.page = body.page || 1;
+        s.pages = body.pages || 1;
         s.total = body.total;
       });
     } else if (id === "plans") {
@@ -270,43 +271,47 @@
 
   function render(id) {
     var body = panelBody(id);
-    body.textContent = "";
     if (CONTEXT[id]) return renderErrors(id, body);
+    body.textContent = "";
     if (id === "plans") return renderPlans(body);
     return renderSessions(body);
   }
 
   // ---- error tabs ----
 
-  function renderChips(id) {
-    var bar = document.querySelector('[data-panel="' + id + '"] .chips');
-    if (!bar) return;
-    bar.textContent = "";
-    var counts = summary && summary.counts ? summary.counts[CONTEXT[id]] : null;
-    FILTERS.forEach(function (f) {
-      var chip = element("button", "chip" + (f === "all" ? "" : " sev-" + f));
-      chip.type = "button";
-      chip.setAttribute("aria-pressed", String(state[id].filter === f));
-      if (f !== "all") chip.appendChild(element("span", "swatch"));
-      chip.appendChild(document.createTextNode(FILTER_TITLES[f] + (counts ? " (" + (counts[f] || 0) + ")" : "")));
-      chip.addEventListener("click", function () {
-        if (state[id].filter === f) return;
-        state[id].filter = f;
+  // The reusable filter (public/data-filter.js): search by meaning + a severity select, and a pager.
+  // The bar and pager are made once per tab, so typing in the search box is never interrupted by a reload.
+  function buildUi(id, body) {
+    var s = state[id];
+    body.textContent = "";
+    var ui = { results: element("div", "results") };
+    ui.filter = window.SeePlanFilter.create({
+      mount: body,
+      label: "Search and filter errors",
+      selectLabel: "Severity",
+      options: SEVERITIES.concat(["unrated"]).map(function (v) { return { value: v, label: FILTER_TITLES[v] }; }),
+      onChange: function (v) {
+        s.q = v.q;
+        s.filter = v.filter === "" ? "all" : v.filter;
+        s.page = 1;
         load(id);
-      });
-      bar.appendChild(chip);
+      },
     });
+    body.appendChild(ui.results);
+    ui.pager = window.SeePlanPager.create({ mount: body, label: "Error pages", onPage: function (n) { s.page = n; load(id); } });
+    s.ui = ui;
+    return ui;
   }
 
   function renderErrors(id, body) {
     var s = state[id];
-    var chips = element("div", "chips");
-    chips.setAttribute("role", "group");
-    chips.setAttribute("aria-label", "Filter by severity");
-    body.appendChild(chips);
-    renderChips(id);
+    var ui = s.ui || buildUi(id, body);
+    var counts = summary && summary.counts ? summary.counts[CONTEXT[id]] : null;
+    ui.filter.setOptions(SEVERITIES.concat(["unrated"]).map(function (v) { return { value: v, label: FILTER_TITLES[v] }; }), counts);
+    ui.results.textContent = "";
+    ui.pager.update({ page: s.page, pages: s.pages, total: s.total });
     if (!s.items.length) {
-      body.appendChild(element("p", "empty", s.filter === "all" ? EMPTY[id] : "No " + FILTER_TITLES[s.filter] + " errors here."));
+      ui.results.appendChild(element("p", "empty", s.filter === "all" && !s.q ? EMPTY[id] : "No errors match this search."));
       return;
     }
     var plan = id === "plan-errors";
@@ -315,16 +320,8 @@
     headers.push("Logged");
     var t = table(headers);
     s.items.forEach(function (item) { t.body.appendChild(errorRow(item, plan)); });
-    body.appendChild(t.table);
-    var foot = element("p", "table-foot", "Showing " + s.items.length + " of " + s.total + ".");
-    if (s.next_offset !== null && s.next_offset !== undefined) {
-      var more = element("button", "", "Load more");
-      more.type = "button";
-      more.addEventListener("click", function () { load(id, true); });
-      foot.appendChild(document.createTextNode(" "));
-      foot.appendChild(more);
-    }
-    body.appendChild(foot);
+    ui.results.appendChild(t.table);
+    ui.results.appendChild(element("p", "table-foot", "Showing " + s.items.length + " of " + s.total + "."));
   }
 
   function errorRow(item, plan) {

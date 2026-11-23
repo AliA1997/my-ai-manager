@@ -297,3 +297,20 @@ dialog textarea { width: 100%; font: inherit; padding: 6px; border: 1px solid va
 }
 
 .signout{display:inline;margin:0}
+
+/* Reusable filter + pager (public/data-filter.js) */
+.data-filter { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; margin-bottom: 12px; }
+.data-filter .field { display: flex; flex-direction: column; gap: 4px; }
+.data-filter label, .settings label { font-size: 13px; color: var(--muted, inherit); }
+.data-filter input[type="search"] { min-width: 260px; }
+.data-filter input, .data-filter select, .settings input, .settings select { min-height: 32px; padding: 4px 8px; font: inherit; }
+.data-pager { display: flex; align-items: center; gap: 12px; margin-top: 12px; }
+.data-pager button { min-height: 32px; min-width: 64px; }
+.notifications { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.notification { padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); }
+.notification.unread { border-color: var(--accent); }
+.notification .kind { font-size: 12px; opacity: 0.8; }
+.notification p { margin: 4px 0; }
+.settings { margin-top: 24px; }
+.settings .field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; max-width: 360px; }
+main { padding: 0 16px 24px; }

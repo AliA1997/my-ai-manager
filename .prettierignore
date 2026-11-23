@@ -1,0 +1,11 @@
+*
+!src/
+!src/**/
+!src/**/*.ts
+!src/**/*.tsx
+!src/**/*.css
+!*.json
+!eslint.config.js
+package-lock.json
+dist/
+data/

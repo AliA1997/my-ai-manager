@@ -45,7 +45,7 @@ test("openUrl uses one argv item, never a shell, and only local URLs", async () 
   assert.deepEqual(calls[0].args, ["http://127.0.0.1:4388/session/abc?x=1&y=2"]);
   assert.equal(calls[0].command, "xdg-open");
   assert.equal(calls[0].opts.shell, false);
-  assert.match(openCommand("http://localhost/", "win32")[0], /explorer\.exe$/i);
+  assert.match(openCommand("http://localhost/", "win32")[0], /rundll32\.exe$/i);
   assert.equal(openCommand("http://localhost/", "darwin")[0], "/usr/bin/open");
   for (const bad of ["https://evil.example/", "file:///etc/passwd", "http://10.0.0.1/", "javascript:alert(1)", "not a url"]) {
     const r = await openUrl(bad, { platform: "linux", spawnFn });

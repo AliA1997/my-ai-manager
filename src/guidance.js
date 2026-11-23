@@ -134,6 +134,7 @@ export const HOME_USAGE = [
   "see-plan prune                remove sessions whose file is gone (--dry-run)",
   "see-plan design               page design rules",
   "see-plan playbook [id]        page recipes: plan, diagram, table, comparison, input, interrogation, progress, verification, multi",
+  "see-plan dashboard            open the dashboard: sessions, features, errors, plans and notifications",
   "see-plan logs                 open the newest Claude session's log in the browser",
   "see-plan error-logs           open the error log tabs: in a project, session and plan errors, its superpowers plans and sessions; elsewhere, recent sessions only (--dir, --no-open)",
   "see-plan errors similar <text>  past errors like <text>, best first: by meaning with Pinecone, else by shared words; needs USE_ERROR_SEARCH=true (--limit <n>, --context <plan|session>, --severity <name>)",

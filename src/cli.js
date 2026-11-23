@@ -18,6 +18,8 @@ import { pathRows, readConfig, resolvePaths } from "./paths.js";
 import { startServerProcess } from "./server-launcher.js";
 import { createToken, loadBrowserKey, rotateBrowserKey, readRuntimeFile, removeRuntimeFile, writeRuntimeFile } from "./auth.js";
 import { createConsoleLog } from "./console-log.js";
+import { DataHub } from "../helpers/data-hub.js";
+import { dataDirFor } from "../helpers/data-dir.js";
 import { createErrorStore, errorSearchEnabled, pineconeSettings } from "./error-store.js";
 import { DESIGN_TEXT, PLAYBOOKS, HOME_USAGE } from "./guidance.js";
 import { CATEGORY_TITLES, STAGES, STAGE_TITLES, isStage, stageStep } from "./stages.js";
@@ -169,15 +171,14 @@ export function createPollOutput({ file, response, errorLogFile = resolvePaths()
   return out;
 }
 
-export function createHomeOutput({ sessions, logsUrl, errorLogsUrl, legacyPaths = false, serverStatus }) {
+export function createHomeOutput({ sessions, dashboardUrl, helpUrl, opened = false, legacyPaths = false, serverStatus }) {
   return {
     ...(serverStatus ? { server_status: serverStatus } : {}),
+    ...(dashboardUrl ? { dashboard: { url: dashboardUrl, status: opened ? "opened" : "ready" } } : {}),
+    ...(helpUrl ? { help: helpUrl } : {}),
     sessions: sessions.map(({ file, status, url }) => ({ file, status, url })),
-    ...(logsUrl ? { claude_logs: logsUrl } : {}),
-    ...(errorLogsUrl ? { error_logs: errorLogsUrl } : {}),
     ...(legacyPaths ? { legacy_paths: "run see-plan migrate" } : {}),
-    usage: HOME_USAGE,
-    next_step: "Open an HTML artifact with `see-plan <file.html>`, or read `see-plan design` and `see-plan playbook` before writing one.",
+    next_step: "The dashboard shows your sessions, errors, plans and notifications, and its Help page lists every command (`see-plan --help` prints the same list). To open a plan: `see-plan <file.html>`; read `see-plan design` and `see-plan playbook` before writing one.",
   };
 }
 
@@ -887,9 +888,12 @@ async function cmdServer(io) {
   const pinecone = pineconeSettings(io.env);
   const consoleLog = createConsoleLog({ tty, write: (s) => io.stderr.write(s), mirror, secrets: [token, browserKey, ...(pinecone.apiKey ? [pinecone.apiKey] : [])] });
   // Pinecone when PINECONE_API_KEY is set and USE_PINECONE=true; otherwise the local error-log.json.
-  const errorStore = await createErrorStore({ file: errorLogFile, env: io.env, log: consoleLog.log, appVersion: VERSION });
+  // First run creates data/ (only when it is missing); it holds errors, notifications, sessions, plans and config.json.
+  const hub = new DataHub(dataDirFor({ env: io.env }));
+  if (hub.created) consoleLog.log(`created data folder ${hub.dir}`);
+  const errorStore = await createErrorStore({ hub, file: errorLogFile, env: io.env, log: consoleLog.log, appVersion: VERSION });
   const server = createServer({
-    store, stateDir, port, idleTimeoutMs, exitOnIdle: true, version: VERSION, errorLogFile, errorStore, errorSearch: errorSearchEnabled(io.env), logDir, token, browserKey,
+    store, stateDir, port, idleTimeoutMs, exitOnIdle: true, version: VERSION, errorLogFile, errorStore, hub, errorSearch: errorSearchEnabled(io.env), logDir, token, browserKey,
     rotateBrowserKey: () => rotateBrowserKey(stateDir, { onWarning: (m) => consoleLog.log(`warning: ${m}`) }),
     allowedHosts: allowedHostsOf(io.env),
     launcherConfig: launcherSettings(io.env, readConfig(paths)),
@@ -916,6 +920,16 @@ async function cmdServer(io) {
   const written = await writeRuntimeFile(paths.runtimeDir, { port: listened.port, pid: process.pid, token, version: VERSION, started_at: new Date().toISOString(), mode });
   if (written.warning) consoleLog.log(`warning: could not restrict ${written.file} to this user (${written.warning}); the server keeps running`);
   consoleLog.banner({ version: VERSION, url: `${baseUrl}/`, mode, rows: pathRows(paths) });
+  // However the shutdown starts (signal, /shutdown, idle), a stuck close (a held socket, a slow write) must not leave
+  // the process holding the port: after 5 s remove the runtime file and exit.
+  server.events.once("closing", () => {
+    setTimeout(() => {
+      try {
+        fs.rmSync(path.join(paths.runtimeDir, "server.json"), { force: true });
+      } catch {}
+      process.exit(0);
+    }, 5000).unref();
+  });
   // S5: one clean shutdown path for signals, the console window closing, /shutdown and the idle timeout.
   const onSignal = (sig) => {
     consoleLog.log(`${sig}: shutting down`);
@@ -956,6 +970,17 @@ async function openPage(pagePath, flags, io) {
   const url = `${conn.baseUrl}${pagePath}`;
   const shown = await showInBrowser(conn, pagePath, flags, io);
   return { conn, url, opened: Boolean(shown.opened), shown };
+}
+
+/** Opens the dashboard: the page a person starts from. Works with or without a terminal. */
+async function cmdDashboard(flags, io) {
+  const { conn, url, opened, shown } = await openPage("/", flags, io);
+  return withServer({
+    dashboard: { url, status: opened ? "opened" : "ready" },
+    next_step: opened
+      ? "The browser shows the dashboard: your sessions and features, recent errors, plans and notifications. `see-plan stop` shuts the server down."
+      : shown.headless ? headlessStep(url, conn.port, shown.reason, "dashboard") : `Open ${url} to see the dashboard (run \`see-plan url dashboard\` for a sign-in link).`,
+  }, conn);
 }
 
 async function cmdLogs(flags, io) {
@@ -1054,6 +1079,7 @@ async function cmdUrl(target, flags, io) {
   const conn = await ensureServer(io.env);
   let pagePath = "/";
   if (target === "logs") pagePath = "/claude";
+  else if (target === "dashboard") pagePath = "/";
   else if (target === "errors") pagePath = (await errorLogsTarget(conn, flags["--dir"] ?? process.cwd())).path;
   else if (target) {
     const ctx = await fileContext(target);
@@ -1075,20 +1101,21 @@ async function cmdHome(flags, io) {
   try {
     sessions = await new SessionStore(stateDir).listSessions();
   } catch {}
-  // A person at a terminal (agents run without a TTY) also gets the Claude log page.
-  let logsUrl;
-  let errorLogsUrl;
+  // The default is the dashboard, for a person or an agent. The command list lives on its Help page (see-plan --help prints it).
+  let dashboardUrl;
+  let helpUrl;
+  let opened = false;
   let conn = null;
-  if (io.stdout.isTTY) {
-    try {
-      conn = await ensureServer(io.env);
-      logsUrl = `${conn.baseUrl}/claude`;
-      errorLogsUrl = (await errorLogsTarget(conn, process.cwd())).url;
-    } catch (e) {
-      io.stderr.write(`Could not open the Claude log page: ${e.message}\n`);
-    }
+  try {
+    const page = await openPage("/", flags, io);
+    conn = page.conn;
+    dashboardUrl = page.url;
+    helpUrl = `${conn.baseUrl}/help`;
+    opened = page.opened;
+  } catch (e) {
+    io.stderr.write(`Could not open the dashboard: ${e.message}\n`);
   }
-  const out = createHomeOutput({ sessions, logsUrl, errorLogsUrl, legacyPaths: paths.usesLegacy, serverStatus: await serverStatusLine(port, paths, conn) });
+  const out = createHomeOutput({ sessions, dashboardUrl, helpUrl, opened, legacyPaths: paths.usesLegacy, serverStatus: await serverStatusLine(port, paths, conn) });
   return withServer(out, conn);
 }
 
@@ -1266,6 +1293,7 @@ export async function run(argv, io = { stdout: process.stdout, stderr: process.s
     else if (first === "prune") result = await cmdPrune(flags, io);
     else if (first === "stop") result = await cmdStop(io);
     else if (first === "logout") result = await cmdLogout(io);
+    else if (first === "dashboard") result = await cmdDashboard(flags, io);
     else if (first === "logs") result = await cmdLogs(flags, io);
     else if (first === "error-logs") result = await cmdErrorLogs(flags, io);
     else if (first === "errors") result = await cmdErrors(second, positional.slice(2), flags, io);

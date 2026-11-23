@@ -4,6 +4,21 @@
 
 The rest of the 2026-11-03 plan (`docs/superpowers/plans/2026-11-03-logs-sessions-plans-fixes.md`, Tasks 2–4): log hand-off, session management and plan management. Its stage inference for plan folders and its Claude-session cache shipped early (0.3.0, and again in 3.2.0).
 
+## [4.2.0] - 2026-11-22
+
+Local data folder, notifications and a shared search filter. Not breaking: an existing `error-log.json` is imported on first start.
+
+### Added
+- **`data/` folder,** created on first run only when missing, with `errors`, `notifications`, `sessions` and `plans`. Each holds a SQLite docstore, a local vector index and a manifest. `config.json` is JSON only.
+- **Deletion rule** (`config.json`, editable at `/notifications`): download then delete, delete the oldest N, or delete nothing and notify. Each rule notifies on deletion.
+- **Notifications:** a record for every new error and every deletion, with a `/notifications` page.
+- **Reusable filter and pager** (`public/data-filter.js`): vector search plus a page-specific select (severity on the errors page). Pagination replaces "Load more".
+- `GET /api/data/:domain` (search, filter, page), `GET/PUT /api/data/config`, `GET /api/data/:domain/export`.
+
+### Changed
+- Errors are stored in `data/errors` instead of `error-log.json`. `/api/errors` takes `q`, `page` and `pageSize`.
+- Requires Node 22.13 or later (`node:sqlite`).
+
 ## [4.1.0] - 2026-11-15
 
 Sign out, and signed-in browsers that can be revoked. Not breaking: 4.0.x browsers stay signed in.

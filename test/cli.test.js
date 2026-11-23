@@ -342,17 +342,24 @@ test("logs prints the Claude log page; bare see-plan opens it only from a termin
   assert.equal((await fetch(logs.url)).status, 401, "a page without the sign-in cookie or token is refused (T5)");
   assert.equal((await authedFetch(env, logs.url)).status, 200);
 
-  const agent = fakeIo(env);
-  assert.equal(await run(["--json"], agent.io), 0);
-  assert.equal(JSON.parse(agent.stdout()).claude_logs, undefined, "agents run without a TTY");
+  // Bare see-plan opens the dashboard, with or without a terminal, and does not print the command list.
+  const bare = fakeIo(env);
+  assert.equal(await run(["--json"], bare.io), 0);
+  const home = JSON.parse(bare.stdout());
+  assert.deepEqual(home.dashboard, { url: `http://127.0.0.1:${env.MY_LAVISH_PORT}/`, status: "ready" });
+  assert.equal(home.help, `http://127.0.0.1:${env.MY_LAVISH_PORT}/help`);
+  assert.equal(home.usage, undefined, "the command list is on the Help page, not printed");
+  assert.equal((await authedFetch(env, home.dashboard.url)).status, 200);
+  assert.equal((await authedFetch(env, home.help)).status, 200);
+  const help = await (await authedFetch(env, `http://127.0.0.1:${env.MY_LAVISH_PORT}/api/help`)).json();
+  assert.equal(help.usage, HOME_USAGE);
 
-  const human = fakeIo(env);
-  human.io.stdout.isTTY = true;
-  assert.equal(await run(["--json"], human.io), 0);
-  assert.equal(JSON.parse(human.stdout()).claude_logs, logs.url);
+  const asked = fakeIo(env);
+  assert.equal(await run(["--help", "--json"], asked.io), 0);
+  assert.equal(JSON.parse(asked.stdout()).usage, HOME_USAGE, "--help still prints the list");
 });
 
-test("error-logs registers a project folder; elsewhere it shows only sessions; bare see-plan prints it", async (t) => {
+test("error-logs registers a project folder; elsewhere it shows only sessions; error-logs is in the Help list", async (t) => {
   const { dir, env } = await mdEnv(t);
   const base = `http://127.0.0.1:${env.MY_LAVISH_PORT}`;
   const repo = path.join(dir, "repo");
@@ -366,8 +373,9 @@ test("error-logs registers a project folder; elsewhere it shows only sessions; b
   assert.equal(inProject.project.name, "repo");
   assert.match(inProject.url, new RegExp(`^${base}/errors\\?project=[0-9a-f]{16}$`));
   assert.match(next_step, /quoted data/);
-  const html = await (await authedFetch(env, inProject.url)).text();
-  assert.equal(html.match(/role="tab"/g).length, 4);
+  assert.ok((await (await authedFetch(env, inProject.url)).text()).includes('<div id="root">'), "the React shell; its four tabs are tested in src/tests/pages.test.ts");
+  const known = await (await authedFetch(env, `${base}/api/projects`)).json();
+  assert.ok(known.projects.some((p) => p.name === "repo"), "the folder is registered");
 
   const plain = path.join(dir, "plain");
   await fs.promises.mkdir(plain, { recursive: true });
@@ -376,12 +384,8 @@ test("error-logs registers a project folder; elsewhere it shows only sessions; b
   const out = JSON.parse(n.stdout());
   assert.deepEqual([out.error_logs.mode, out.error_logs.url, out.error_logs.project], ["sessions-only", `${base}/errors`, undefined]);
   assert.match(out.next_step, /only recent sessions/);
-  assert.equal((await (await authedFetch(env, out.error_logs.url)).text()).match(/role="tab"/g).length, 1);
+  assert.ok((await (await authedFetch(env, out.error_logs.url)).text()).includes('<div id="root">'));
 
-  const human = fakeIo(env);
-  human.io.stdout.isTTY = true;
-  assert.equal(await run(["--json"], human.io), 0);
-  assert.ok(JSON.parse(human.stdout()).error_logs.startsWith(`${base}/errors`));
   assert.ok(HOME_USAGE.includes("see-plan error-logs"));
 });
 

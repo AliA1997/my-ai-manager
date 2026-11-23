@@ -1,0 +1,20 @@
+[
+  {"id":"FE-10","level":"MUST","sev":"high","exts":["js","jsx","ts","tsx"],"pattern":"\\buseEffect\\s*\\(","message":"useEffect is banned; use a loader, an action or derive in render"},
+  {"id":"SEC-4","level":"MUST","sev":"high","exts":["js","jsx","ts","tsx","html"],"pattern":"\\.innerHTML\\s*(=|\\+=)|dangerouslySetInnerHTML|document\\.write\\(","message":"untrusted data as markup; use textContent or sanitize"},
+  {"id":"SEC-4","level":"MUST","sev":"high","exts":["js","jsx","ts","tsx"],"pattern":"\\beval\\s*\\(|new Function\\s*\\(","message":"eval / new Function"},
+  {"id":"SEC-3","level":"MUST","sev":"high","exts":["js","ts"],"pattern":"(?<![.\\w])(exec|execSync)\\s*\\(|child_process\\.exec(Sync)?\\(","message":"shell string execution; use execFile with an argument array"},
+  {"id":"SEC-3","level":"MUST","sev":"high","exts":["js","ts"],"pattern":"\\b(SELECT\\b[^\\n]*\\bFROM|INSERT INTO|UPDATE\\s+\\w+\\s+SET|DELETE FROM)\\b[^\\n]*(\\$\\{|\"\\s*\\+)","message":"SQL built by string joining; parameterize"},
+  {"id":"SEC-2","level":"MUST","sev":"medium","exts":["js","ts"],"pattern":"Math\\.random\\(","message":"Math.random is not secure; use crypto.randomBytes/randomUUID if this is a token or id"},
+  {"id":"SEC-6","level":"MUST","sev":"medium","exts":["js","ts"],"pattern":"0\\.0\\.0\\.0","message":"binds all interfaces; bind 127.0.0.1"},
+  {"id":"SEC-8","level":"MUST","sev":"medium","exts":["js","jsx","ts","tsx"],"pattern":"[?&](token|apikey|api_key|password|secret)=","flags":"i","message":"credential in a URL"},
+  {"id":"SEC-12","level":"MUST","sev":"high","exts":["js","jsx","ts","tsx","html"],"pattern":"(api[_-]?key|secret|passw(or)?d|token)\\s*[:=]\\s*['\"][A-Za-z0-9_\\-\\/+=]{12,}['\"]","flags":"i","message":"possible hard-coded secret"},
+  {"id":"A11Y-1","level":"MUST","sev":"medium","exts":["jsx","tsx","html"],"pattern":"<(div|span)\\b[^>]*\\bon[cC]lick\\b","message":"clickable div/span; use button or a"},
+  {"id":"A11Y-3","level":"MUST","sev":"medium","exts":["jsx","tsx","html"],"pattern":"<img\\b(?![^>]*\\balt=)","message":"img without alt"},
+  {"id":"A11Y-4","level":"MUST","sev":"low","exts":["css","html","jsx","tsx"],"pattern":"outline\\s*:\\s*(none|0)\\b|(^|[\\s\"'])outline-none","message":"focus outline removed; confirm a visible replacement exists"},
+  {"id":"A11Y-7","level":"MUST","sev":"medium","exts":["jsx","tsx","html"],"pattern":"target=[\"']_blank[\"'](?![^>]*\\brel=)","message":"_blank without rel=noopener noreferrer"},
+  {"id":"A11Y-7","level":"MUST","sev":"low","exts":["jsx","tsx","html"],"pattern":">\\s*click here\\s*<","flags":"i","message":"non-descriptive link text"},
+  {"id":"PERF-1","level":"MUST","sev":"low","exts":["jsx","tsx","html"],"pattern":"<img\\b(?![^>]*\\bwidth=)","message":"img without width/height causes layout shift"},
+  {"id":"PERF-2","level":"MUST","sev":"low","exts":["jsx","tsx","html"],"pattern":"<img\\b(?![^>]*\\bloading=)(?![^>]*fetchpriority)","message":"img without loading= (lazy, or fetchpriority=high if above the fold)"},
+  {"id":"PERF-5","level":"MUST","sev":"low","exts":["jsx","tsx"],"pattern":"\\bkey=\\{\\s*(i|idx|index)\\s*\\}","message":"array index as key"},
+  {"id":"DX-3","level":"MUST","sev":"medium","exts":["ts","tsx"],"pattern":"@ts-ignore|:\\s*any\\b|as any\\b","message":"any / @ts-ignore"}
+]

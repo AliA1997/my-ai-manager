@@ -1,0 +1,16 @@
+import { describe, it, expect } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import { {{Name}} } from '../components/{{feature}}/{{Name}}';
+
+describe('{{Name}}', () => {
+  it('renders each item as a list entry', () => {
+    render(<{{Name}} items={[{ id: '1', title: 'First' }]} />);
+    expect(screen.getByRole('list')).toBeTruthy();
+    expect(screen.getByText('First')).toBeTruthy();
+  });
+
+  it('renders an empty list without crashing', () => {
+    render(<{{Name}} items={[]} />);
+    expect(screen.queryAllByRole('listitem')).toHaveLength(0);
+  });
+});

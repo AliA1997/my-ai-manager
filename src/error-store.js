@@ -10,9 +10,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import {
-  appendErrorLog, appendedResult, duplicateResult, ErrorLogError, errorLogSize, getErrorRecord, getFrom,
-  isRecord, listErrorRecords, listFrom, rateErrorRecord, ratingPatch, readErrorRecords, reportedFrom, reportedRecords,
-  summarizeErrorRecords, summarizeFrom, view,
+  appendedResult, duplicateResult, ErrorLogError, getFrom, isRecord, listFrom, ratingPatch, reportedFrom, summarizeFrom, view,
 } from "./error-log.js";
 import { redactSecrets } from "./redact.js";
 import { isSeverity } from "./severity.js";
@@ -96,63 +94,117 @@ function localSimilar(vectors, query, { limit = 5, context, severity } = {}, loo
 }
 
 // ---------------------------------------------------------------------------------------------------------
-// Local: the error-log.json file (unchanged behaviour), plus a vector cache built from it for similar search.
+// Local: data/errors (docstore.sqlite + index.vec + manifest.json), through the DataHub (helpers/data-hub.js).
+// A legacy error-log.json is imported once, the first time the store is empty.
 
 export class LocalErrorStore {
-  constructor(file, { why = "USE_PINECONE is not true" } = {}) {
+  /** @param {import("../helpers/data-hub.js").DataHub} hub  @param {{ legacyFile?: string, why?: string }} [opts] */
+  constructor(hub, { legacyFile = null, why = "USE_PINECONE is not true" } = {}) {
     this.kind = "local";
-    this.file = file;
-    this.where = file;
-    this.label = file;
+    this.hub = hub;
+    this.db = hub.store("errors");
+    this.where = this.db.dir;
+    this.label = this.db.dir;
     this.why = why;
-    this.vectors = new VectorCache();
-    this.synced = null; // the records array the vectors were last built from
+    this.queue = Promise.resolve();
+    this.cached = null;
+    if (legacyFile) this.importLegacy(legacyFile);
+  }
+
+  /** Imports the old JSON array once. The file is left untouched; a marker next to the store says it was read. */
+  importLegacy(file) {
+    const marker = path.join(this.db.dir, "legacy-imported.json");
+    if (fs.existsSync(marker) || !fs.existsSync(file)) return;
+    try {
+      const records = JSON.parse(fs.readFileSync(file, "utf8"));
+      if (!Array.isArray(records)) return;
+      this.importRecords(records);
+      fs.writeFileSync(marker, JSON.stringify({ from: file, at: new Date().toISOString(), records: records.length }) + "\n");
+    } catch {}
+  }
+
+  /** Stores records as they are (ignoring anything that is not an error record). Used by the legacy import. */
+  importRecords(records) {
+    for (const r of records) if (isRecord(r)) this.db.put(recordId(r), docOf(r));
+    this.cached = null;
+  }
+
+  /** Every record, oldest first. Kept in memory until a write, so list and summary stay fast. */
+  records() {
+    this.cached ??= this.db.all().map((d) => d.body);
+    return this.cached;
+  }
+
+  serialized(fn) {
+    const run = this.queue.then(fn);
+    this.queue = run.catch(() => {});
+    return run;
   }
 
   async ready() {
     return this.describe();
   }
 
+  /** Adds a record (a duplicate is skipped), then notifies and applies the deletion rule. */
   append(record) {
-    return appendErrorLog(this.file, record);
+    return this.serialized(() => {
+      const id = recordId(record);
+      const saved = this.db.get(id);
+      if (saved) return duplicateResult(saved.body);
+      this.db.put(id, docOf(record));
+      this.cached = null;
+      this.hub.notify("error", "New error logged", String(record.text ?? "").slice(0, 200), { ref: id, severity: record.severity ?? null });
+      this.hub.enforce("errors");
+      return appendedResult(record);
+    });
   }
 
   rate(ref, severity, reason) {
-    return rateErrorRecord(this.file, ref, severity, reason);
+    return this.serialized(() => {
+      const id = recordId(ref);
+      const saved = this.db.get(id);
+      const patch = ratingPatch(saved?.body, severity, reason);
+      const next = { ...saved.body, ...patch };
+      this.db.put(id, { ...docOf(next), createdAt: saved.createdAt });
+      this.cached = null;
+      return { severity: next.severity, reason: typeof next.reason === "string" ? next.reason : null };
+    });
   }
 
-  reported(claudeSessionId) {
-    return reportedRecords(this.file, claudeSessionId);
+  async reported(claudeSessionId) {
+    return reportedFrom(this.records(), claudeSessionId);
   }
 
-  list(opts, lookup) {
-    return listErrorRecords(this.file, opts, lookup);
+  async list(opts, lookup) {
+    return listFrom(this.records(), opts, lookup);
   }
 
-  get(ref, lookup) {
-    return getErrorRecord(this.file, ref, lookup);
+  async get(ref, lookup) {
+    return getFrom(this.records(), ref, lookup);
   }
 
-  summarize(lookup) {
-    return summarizeErrorRecords(this.file, lookup);
+  async summarize(lookup) {
+    return summarizeFrom(this.records(), lookup);
   }
 
   /** The `limit` records most like `query`: { engine: "local", matches: [{ score, record }] }. */
-  async similar(query, opts = {}, lookup) {
-    const records = await readErrorRecords(this.file);
-    if (records !== this.synced) { // error-log.js hands back the same array until the file changes
-      syncVectors(this.vectors, records);
-      this.synced = records;
-    }
-    return { engine: "local", matches: localSimilar(this.vectors, query, opts, lookup) };
+  async similar(query, { limit = 5, context, severity } = {}, lookup) {
+    const hits = this.db.search({ q: query, pageSize: 100, page: 1 }).items
+      .map((d) => ({ score: d.score, record: view(d.body, lookup) }))
+      .filter((m) => matchesFilter(m.record, { context, severity }));
+    return { engine: "local", matches: hits.slice(0, limit) };
   }
 
   async describe() {
-    const records = await readErrorRecords(this.file).catch(() => []);
-    return { kind: this.kind, where: this.where, why: this.why, records: records.length, bytes: await errorLogSize(this.file) };
+    return { kind: this.kind, where: this.where, why: this.why, records: this.db.count(), bytes: this.db.bytes() };
   }
 
   close() {}
+}
+
+/** A record as a DomainStore document: severity is the page filter, text is what the vector index searches. */
+function docOf(r) {
+  return { text: searchText(r), filter: isSeverity(r.severity) ? r.severity : "unrated", body: r, createdAt: r.reported_at ?? new Date().toISOString() };
 }
 
 // ---------------------------------------------------------------------------------------------------------
@@ -527,11 +579,11 @@ export class PineconeErrorStore {
  * Picks the store from the environment (see the top of this file). `client` replaces the Pinecone SDK in tests.
  * Logs which store it chose, and why, without ever logging the key.
  */
-export async function createErrorStore({ file, env = process.env, log = () => {}, client = null, appVersion = null } = {}) {
+export async function createErrorStore({ hub, file = null, env = process.env, log = () => {}, client = null, appVersion = null } = {}) {
   const s = pineconeSettings(env);
   if (!s.on) {
-    if (s.warn) log(`warning: ${s.why}; error records stay in ${file}`);
-    return new LocalErrorStore(file, { why: s.why });
+    if (s.warn) log(`warning: ${s.why}; error records stay in ${hub.dir}`);
+    return new LocalErrorStore(hub, { legacyFile: file, why: s.why });
   }
   let pc = client;
   if (!pc) {
@@ -540,7 +592,7 @@ export async function createErrorStore({ file, env = process.env, log = () => {}
   }
   return new PineconeErrorStore({
     client: pc, index: s.index, namespace: s.namespace, why: s.why, log, appVersion,
-    outboxFile: path.join(path.dirname(file), "pinecone-outbox.json"),
+    outboxFile: path.join(hub.dir, "pinecone-outbox.json"),
     reporter: env.SEE_PLAN_REPORTER || os.userInfo().username,
   });
 }

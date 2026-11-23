@@ -11,6 +11,8 @@ import WebSocket from "ws";
 import { authHeaders, createServer, rawFetch, tokenFor } from "./helpers/authed-server.js";
 import { capFor } from "../src/auth.js";
 import { SessionStore } from "../src/session-store.js";
+import { DataHub } from "../helpers/data-hub.js";
+import { LocalErrorStore } from "../src/error-store.js";
 
 async function setup(t, opts = {}) {
   const tmp = await fs.promises.mkdtemp(path.join(os.tmpdir(), "mla-loop-"));
@@ -94,9 +96,7 @@ function wsAttempt(port, p, headers = {}) {
 }
 
 async function bootstrap(baseUrl, key) {
-  const html = await (await fetch(`${baseUrl}/session/${key}`)).text();
-  const m = html.match(/<script type="application\/json" id="my-lavish-session">([\s\S]*?)<\/script>/);
-  return JSON.parse(m[1]);
+  return (await fetch(`${baseUrl}/api/${key}/page`)).json();
 }
 
 test("prompts require same origin and return the chat", async (t) => {
@@ -461,7 +461,6 @@ test("restarted server re-watches existing sessions on websocket connect", async
   const stateDir = path.join(tmp, "state");
   const file = path.join(tmp, "a.html");
   await fs.promises.writeFile(file, "<html><body>hi</body></html>");
-  t.after(() => fs.promises.rm(tmp, { recursive: true, force: true }));
   const mk = () => createServer({ store: new SessionStore(stateDir), stateDir, port: 0, version: "0.1.0" });
   const first = mk();
   const a = await first.listen();
@@ -473,7 +472,10 @@ test("restarted server re-watches existing sessions on websocket connect", async
   await first.close();
   const second = mk();
   const b = await second.listen();
-  t.after(() => second.close());
+  t.after(async () => {
+    await second.close(); // closes the data folder's SQLite files, which Windows will not delete while open
+    await fs.promises.rm(tmp, { recursive: true, force: true, maxRetries: 5 });
+  });
   const { ws, waitFor } = await connectWs(b.port, key);
   t.after(() => ws.terminate());
   await waitFor((m) => m.type === "chat");
@@ -498,7 +500,7 @@ test("new-session restarts an ended session", async (t) => {
   assert.equal(res.status, 200);
   assert.equal((await res.json()).status, "open");
   await waitFor((m) => m.type === "new-session");
-  const page = await (await fetch(`${baseUrl}/session/${key}`)).text();
+  const page = await (await fetch(`${baseUrl}/api/${key}/page`)).text();
   assert.ok(!page.includes('"status":"ended"'));
   const again = await postJson(`/api/${key}/new-session`, {}, { Origin: baseUrl });
   assert.equal(again.status, 409);
@@ -526,7 +528,7 @@ test("connect-claude launches and records the id", async (t) => {
   assert.equal(path.resolve(fake.calls[0].cwd).startsWith(path.resolve(await fs.promises.realpath(art)).slice(0, 3)), true);
   const msg = await waitFor((m) => m.type === "claude-session");
   assert.equal(msg.id, body.claude_session_id);
-  const page = await (await fetch(`${baseUrl}/session/${key}`)).text();
+  const page = await (await fetch(`${baseUrl}/api/${key}/page`)).text();
   assert.ok(page.includes(body.claude_session_id));
 });
 
@@ -783,11 +785,14 @@ test("ending a session clears the working state", async (t) => {
 async function logPage(t) {
   const { claudeDir, transcript } = await claudeFixture(t);
   const errorDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), "mla-errlog-"));
-  t.after(() => fs.promises.rm(errorDir, { recursive: true, force: true }));
   const errorLogFile = path.join(errorDir, "claude-errors", "error-log.json");
-  const ctx = await setup(t, { claudeDir, errorLogFile });
+  const hub = new DataHub(path.join(errorDir, "data"));
+  const errorStore = new LocalErrorStore(hub, { legacyFile: errorLogFile });
+  const ctx = await setup(t, { claudeDir, errorLogFile, hub, errorStore });
+  // After setup's own cleanup, which closes the server and with it the data folder.
+  t.after(() => fs.promises.rm(errorDir, { recursive: true, force: true, maxRetries: 5 }));
   const entry = { claude_session_id: CLAUDE_ID, uuid: "u-9", part: 0, role: "user", kind: "text", at: "2026-10-25T23:32:00.000Z", text: "three", severity: "low" };
-  return { ...ctx, transcript, errorLogFile, entry };
+  return { ...ctx, transcript, errorLogFile, errorStore, entry };
 }
 
 test("the Claude log page reads a session by id, with its last prompt time", async (t) => {
@@ -799,7 +804,7 @@ test("the Claude log page reads a session by id, with its last prompt time", asy
   const page = await fetch(`${baseUrl}/claude`);
   assert.equal(page.status, 200);
   assert.equal(page.headers.get("x-frame-options"), "DENY");
-  assert.match(await page.text(), /id="sessionId"/);
+  assert.match(await page.text(), /id="root"/);
 
   const log = await (await fetch(`${baseUrl}/api/claude-sessions/${CLAUDE_ID}/log`)).json();
   assert.equal(log.found, true);
@@ -817,7 +822,7 @@ test("the Claude log page reads a session by id, with its last prompt time", asy
 });
 
 test("a log page click appends the entry to the error log once", async (t) => {
-  const { baseUrl, postJson, errorLogFile, entry } = await logPage(t);
+  const { baseUrl, postJson, errorStore, entry } = await logPage(t);
   const page = { Origin: baseUrl };
   assert.equal((await postJson("/api/claude-errors", { entry })).status, 403, "only the page may write");
   const first = await postJson("/api/claude-errors", { entry }, page);
@@ -826,7 +831,7 @@ test("a log page click appends the entry to the error log once", async (t) => {
   assert.equal((await (await postJson("/api/claude-errors", { entry }, page)).json()).duplicate, true);
   await postJson("/api/claude-errors", { entry: { ...entry, part: 1, role: "assistant", kind: "tool_use" } }, page);
 
-  const records = JSON.parse(await fs.promises.readFile(errorLogFile, "utf8"));
+  const records = errorStore.records();
   assert.deepEqual(records.map((r) => [r.claude_session_id, r.uuid, r.part, r.text]), [[CLAUDE_ID, "u-9", 0, "three"], [CLAUDE_ID, "u-9", 1, "three"]]);
   assert.ok(!Number.isNaN(Date.parse(records[0].reported_at)));
   const log = await (await fetch(`${baseUrl}/api/claude-sessions/${CLAUDE_ID}/log`)).json();
@@ -838,7 +843,7 @@ test("a log page click appends the entry to the error log once", async (t) => {
 });
 
 test("a logged entry keeps an optional reason; a duplicate keeps the first one", async (t) => {
-  const { baseUrl, postJson, errorLogFile, entry } = await logPage(t);
+  const { baseUrl, postJson, errorStore, entry } = await logPage(t);
   const page = { Origin: baseUrl };
   const post = async (e) => {
     const res = await postJson("/api/claude-errors", { entry: e }, page);
@@ -865,7 +870,7 @@ test("a logged entry keeps an optional reason; a duplicate keeps the first one",
     assert.deepEqual([res.status, res.body.error.code], [400, "VALIDATION_ERROR"], JSON.stringify(bad));
   }
 
-  const records = JSON.parse(await fs.promises.readFile(errorLogFile, "utf8"));
+  const records = errorStore.records();
   assert.deepEqual(records.map((r) => [r.part, r.reason === null ? null : r.reason.length > 20 ? "long" : r.reason]), [[0, "wrong file edited"], [1, null], [2, null], [3, "long"]]);
   assert.ok(records.every((r) => "reason" in r), "every new record has a reason field");
 
@@ -886,20 +891,29 @@ test("session routes refuse keys that are not 16 hex digits, __proto__ included"
   assert.equal((await fetch(`${baseUrl}/api/__proto__/status`)).status, 404);
 });
 
-test("the error log keeps existing records and is never overwritten when it is not a JSON array", async (t) => {
-  const { baseUrl, postJson, errorLogFile, entry } = await logPage(t);
-  await fs.promises.mkdir(path.dirname(errorLogFile), { recursive: true });
-  await fs.promises.writeFile(errorLogFile, JSON.stringify([{ note: "kept" }]));
+test("the error log keeps existing records, and an unreadable legacy error-log.json is left alone", async (t) => {
+  const { baseUrl, postJson, errorLogFile, errorStore, entry } = await logPage(t);
+  errorStore.importRecords([{ claude_session_id: CLAUDE_ID, uuid: "kept", part: 0, text: "kept", reported_at: "2026-10-01T00:00:00.000Z" }]);
   assert.equal((await postJson("/api/claude-errors", { entry }, { Origin: baseUrl })).status, 200);
-  assert.deepEqual(JSON.parse(await fs.promises.readFile(errorLogFile, "utf8")).map((r) => r.note ?? r.uuid), ["kept", "u-9"]);
+  assert.deepEqual(errorStore.records().map((r) => r.uuid), ["kept", "u-9"]);
 
+  await fs.promises.mkdir(path.dirname(errorLogFile), { recursive: true });
   await fs.promises.writeFile(errorLogFile, "{ not json");
   const res = await postJson("/api/claude-errors", { entry: { ...entry, uuid: "u-10" } }, { Origin: baseUrl });
-  assert.equal(res.status, 409);
-  assert.equal((await res.json()).error.code, "ERROR_LOG_UNREADABLE");
+  assert.equal(res.status, 200, "new errors go to data/errors, so a bad legacy file cannot block them");
   assert.equal(await fs.promises.readFile(errorLogFile, "utf8"), "{ not json");
 });
 
+test("a new error adds a notification", async (t) => {
+  const { baseUrl, postJson, entry } = await logPage(t);
+  assert.equal((await postJson("/api/claude-errors", { entry }, { Origin: baseUrl })).status, 200);
+  const list = await (await fetch(`${baseUrl}/api/data/notifications?filter=error`)).json();
+  assert.equal(list.total, 1);
+  assert.equal(list.items[0].kind, "error");
+  const errors = await (await fetch(`${baseUrl}/api/data/errors?filter=low&q=three`)).json();
+  assert.equal(errors.total, 1);
+  assert.deepEqual(errors.options, ["low", "medium", "high", "send_to_it", "unrated"]);
+});
 
 test("agent polls are capped at agentPollMs; non-agent polls are not", async (t) => {
   const { file, postJson } = await setup(t, { agentPollMs: 150 });

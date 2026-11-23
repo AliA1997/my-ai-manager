@@ -1,0 +1,4 @@
+schema_version: "1.1"
+name: reviews-working-tree
+expected_outcome: |
+  Files are discovered and scanned by script, findings cite rule IDs, a verdict is given, nothing is edited.

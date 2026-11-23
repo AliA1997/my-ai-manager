@@ -1,0 +1,2 @@
+jev-sweep: 1 yes-answers across 1 questions (scores >=0.9 act on, 0.6-0.9 verify the cited line)
+SEC-4   0.82  yes     public/chrome-client.js:231

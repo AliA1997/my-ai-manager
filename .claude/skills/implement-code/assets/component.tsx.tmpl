@@ -1,0 +1,26 @@
+import { memo } from 'react';
+
+export type {{Name}}Props = {
+  items: ReadonlyArray<{ id: string; title: string }>;
+};
+
+/**
+ * {{Name}} — {{feature}} feature. Add one sentence on what it shows (DX-7).
+ * Memoized (FE-12): keep props stable so it does not rerender (PERF-5).
+ */
+export const {{Name}} = memo(function {{Name}}({ items }: {{Name}}Props) {
+  return (
+    <section aria-labelledby="{{name}}-heading">
+      <h2 id="{{name}}-heading" className="mb-2 text-lg font-medium text-slate-900">
+        {{Name}}
+      </h2>
+      <ul className="divide-y divide-slate-200">
+        {items.map((item) => (
+          <li key={item.id} className="py-2 text-sm text-slate-700">
+            {item.title}
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+});

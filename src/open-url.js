@@ -5,7 +5,10 @@ const LOCAL_HOSTS = new Set(["127.0.0.1", "localhost"]);
 
 /** The browser launcher per platform: the URL is always one argv item, never parsed by a shell. */
 export function openCommand(href, platform = process.platform, { wsl = false } = {}) {
-  if (platform === "win32") return [path.join(process.env.SystemRoot ?? "C:\\Windows", "explorer.exe"), [href]];
+  // rundll32 hands the URL straight to the default browser; explorer.exe can open a File Explorer window instead.
+  if (platform === "win32") {
+    return [path.join(process.env.SystemRoot ?? "C:\\Windows", "System32", "rundll32.exe"), ["url.dll,FileProtocolHandler", href]];
+  }
   if (platform === "darwin") return ["/usr/bin/open", [href]];
   if (wsl) return ["wslview", [href]];
   return ["xdg-open", [href]];

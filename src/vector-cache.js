@@ -105,6 +105,12 @@ export class VectorCache {
     this.matrix.set(this.embed(text), row * D);
   }
 
+  /** Adds `id` with a vector that was already computed (loading a saved index), so nothing is re-embedded. */
+  setRaw(id, vector, meta = null) {
+    this.set(id, "", meta);
+    this.matrix.set(vector, this.rowOf.get(id) * this.dimensions);
+  }
+
   /** Changes what comes back with `id` without re-embedding it (for example a new severity). */
   setMeta(id, meta) {
     const row = this.rowOf.get(id);

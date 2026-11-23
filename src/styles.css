@@ -1,0 +1,92 @@
+@import 'tailwindcss';
+
+/* Design tokens, copied from the pages this replaces (errors.css). Dark mode swaps the variables, not the classes. */
+:root {
+  color-scheme: light dark;
+  --page: #f6f3ee;
+  --surface: #fffdf9;
+  --fg: #2b2620;
+  --muted: #6b6155; /* 4.5:1 on --page (A11Y-6) */
+  --line: #e2d9cb;
+  --accent: #c8963e;
+  --link: #8a5a12;
+  --danger: #b3261e;
+  --sev-low: #e8730c;
+  --sev-low-fg: #000000;
+  --sev-medium: #f2b600;
+  --sev-medium-fg: #000000;
+  --sev-high: #c62828;
+  --sev-high-fg: #ffffff;
+  --sev-send-to-it: #7b1e3a;
+  --sev-send-to-it-fg: #ffffff;
+  --sev-unrated: #6b7280;
+  --sev-unrated-fg: #ffffff;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --page: #181614;
+    --surface: #1f1c19;
+    --fg: #ece6dc;
+    --muted: #a69c8e;
+    --line: #3a342d;
+    --accent: #d6a752;
+    --link: #e2b96a;
+    --danger: #f2b8b5;
+    --sev-low: #ff9a3d;
+    --sev-medium: #ffc94d;
+    --sev-high: #ff5c5c;
+    --sev-high-fg: #000000;
+    --sev-send-to-it: #c2456a;
+    --sev-unrated: #9ca3af;
+    --sev-unrated-fg: #000000;
+  }
+}
+
+@theme {
+  --color-page: var(--page);
+  --color-surface: var(--surface);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-link: var(--link);
+  --color-danger: var(--danger);
+  --color-sev-low: var(--sev-low);
+  --color-sev-low-fg: var(--sev-low-fg);
+  --color-sev-medium: var(--sev-medium);
+  --color-sev-medium-fg: var(--sev-medium-fg);
+  --color-sev-high: var(--sev-high);
+  --color-sev-high-fg: var(--sev-high-fg);
+  --color-sev-send-to-it: var(--sev-send-to-it);
+  --color-sev-send-to-it-fg: var(--sev-send-to-it-fg);
+  --color-sev-unrated: var(--sev-unrated);
+  --color-sev-unrated-fg: var(--sev-unrated-fg);
+}
+
+@layer base {
+  body {
+    margin: 0;
+    background: var(--page);
+    color: var(--fg);
+    font:
+      14px/1.5 system-ui,
+      -apple-system,
+      'Segoe UI',
+      Roboto,
+      sans-serif;
+  }
+  [hidden] {
+    display: none !important;
+  }
+}
+
+/* UX-4: no non-essential motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

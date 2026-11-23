@@ -3,10 +3,26 @@ import path from "node:path";
 import * as nodeSea from "node:sea";
 import { fileURLToPath } from "node:url";
 
-/** The browser files the server serves. In a single-executable build they are SEA assets with these names. */
-export const PUBLIC_ASSETS = ["sdk.js", "chrome-client.js", "chrome.css", "logs-client.js", "logs.css", "home-client.js", "home.css", "errors-client.js", "errors.css", "output-render.js", "vendor/mermaid.min.js"];
+const BASE_ASSETS = ["sdk.js", "logs-client.js", "logs.css", "home-client.js", "home.css", "errors-client.js", "errors.css", "data-filter.js", "notifications-client.js", "output-render.js", "vendor/mermaid.min.js"];
 
-export const CONTENT_TYPES = { ".js": "application/javascript; charset=utf-8", ".css": "text/css; charset=utf-8" };
+/** Written by scripts/build-app.js: every file of the React bundle (public/app/). */
+const APP_MANIFEST = "app/manifest.json";
+
+/** The files of the built React app, or none when it has not been built. Read from disk, or from the SEA blob. */
+function appAssetNames() {
+  try {
+    const raw = isSea() ? Buffer.from(nodeSea.getAsset(APP_MANIFEST)) : fs.readFileSync(path.join(publicDir(), APP_MANIFEST));
+    const { files } = JSON.parse(raw.toString("utf8"));
+    return Array.isArray(files) ? [APP_MANIFEST, ...files.filter((f) => typeof f === "string" && f.startsWith("app/") && !f.includes("..") && /^[A-Za-z0-9._/-]+$/.test(f))] : [];
+  } catch {
+    return [];
+  }
+}
+
+/** The browser files the server serves. In a single-executable build they are SEA assets with these names. */
+export const PUBLIC_ASSETS = [...BASE_ASSETS, ...appAssetNames()];
+
+export const CONTENT_TYPES = { ".js": "application/javascript; charset=utf-8", ".css": "text/css; charset=utf-8", ".json": "application/json; charset=utf-8" };
 
 /** True inside a Node single executable application. */
 export function isSea(sea = nodeSea) {

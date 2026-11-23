@@ -14,7 +14,7 @@ const EXAMPLE = path.join(ROOT, "examples", "plan.html");
 const binIndex = process.argv.indexOf("--bin");
 let EXE = binIndex >= 0 ? path.resolve(process.argv[binIndex + 1]) : null;
 if (EXE && process.platform === "win32" && !EXE.endsWith(".exe") && fs.existsSync(`${EXE}.exe`)) EXE += ".exe";
-const ASSETS = ["sdk.js", "chrome-client.js", "chrome.css", "logs-client.js", "logs.css", "home-client.js", "home.css", "errors-client.js", "errors.css", "output-render.js", "vendor/mermaid.min.js"];
+const ASSETS = ["sdk.js", "logs-client.js", "logs.css", "home-client.js", "home.css", "errors-client.js", "errors.css", "output-render.js", "vendor/mermaid.min.js"];
 
 function freePort() {
   return new Promise((resolve, reject) => {
@@ -107,9 +107,11 @@ async function main(env, workDir) {
   assert((await fetch(signIn.url, { redirect: "manual" })).status === 401, "a sign-in link works once");
   const page = await fetch(`${baseUrl}${url.pathname}`, { headers: { cookie } });
   assert(page.status === 200, "the cookie opens the page");
-  const html = await page.text();
-  const cap = html.match(/\/artifact\/[0-9a-f]{16}\/([0-9a-f]{32})\/index\.html/)?.[1];
-  assert(cap, "the page puts a capability in the artifact frame URL (T6)");
+  const shell = await page.text();
+  assert(shell.includes('<div id="root">') && !shell.includes("<iframe"), "the page is the React shell");
+  const data = await (await fetch(`${baseUrl}/api/${key}/page`, { headers: { cookie } })).json();
+  const cap = data.artifact_base?.match(/\/artifact\/[0-9a-f]{16}\/([0-9a-f]{32})$/)?.[1];
+  assert(cap, "the page data puts a capability in the artifact frame URL (T6)");
   assert((await fetch(`${baseUrl}/artifact/${key}/${cap}/index.html`)).status === 200, "the frame loads with the capability alone");
   await new Promise((resolve, reject) => {
     const ws = new WebSocket(`ws://${url.host}/events/${key}`, { headers: { cookie, origin: baseUrl } });
@@ -189,9 +191,10 @@ async function errorTabs(baseUrl, workDir, stateDir) {
   const projectKey = new URL(inProject.url).searchParams.get("project");
   const elsewhere = JSON.parse(await cli(["error-logs", "--dir", stateDir, "--no-open", "--json"], env)).error_logs;
   assert(elsewhere.mode === "sessions-only" && elsewhere.url === `${baseUrl}/errors`, `error-logs elsewhere: ${JSON.stringify(elsewhere)}`);
-  const tabCount = async (u) => ((await (await api(u)).text()).match(/role="tab"/g) ?? []).length;
-  assert((await tabCount(inProject.url)) === 4, "a project's /errors has four tabs");
-  assert((await tabCount(`${baseUrl}/errors`)) === 1, "/errors outside a project has only Sessions");
+  // The tabs are drawn by React in the browser (asserted in src/tests/pages.test.ts); the server answers the shell.
+  const isShell = async (u) => (await (await api(u)).text()).includes('<div id="root">');
+  assert(await isShell(inProject.url), "a project's /errors is the React shell");
+  assert(await isShell(`${baseUrl}/errors`), "/errors outside a project is the React shell");
   const summary = await jsonFetch(`${baseUrl}/api/errors/summary?project=${projectKey}`);
   for (const context of ["session", "plan"]) {
     const c = summary.counts[context];

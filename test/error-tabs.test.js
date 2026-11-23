@@ -6,6 +6,8 @@ import path from "node:path";
 import { createServer } from "./helpers/authed-server.js";
 import { planStatus } from "../src/server.js";
 import { SessionStore } from "../src/session-store.js";
+import { DataHub } from "../helpers/data-hub.js";
+import { LocalErrorStore } from "../src/error-store.js";
 import { appendErrorLog, listErrorRecords, rateErrorRecord, summarizeErrorRecords } from "../src/error-log.js";
 import { isSeverity, SEVERITIES } from "../src/severity.js";
 
@@ -16,7 +18,6 @@ const C = id(3); // attached to nothing
 
 async function world(t, { transcripts = 3, opts = {} } = {}) {
   const tmp = await fs.promises.mkdtemp(path.join(os.tmpdir(), "mla-tabs-"));
-  t.after(() => fs.promises.rm(tmp, { recursive: true, force: true }));
   const claudeDir = path.join(tmp, "claude");
   const claudeProject = path.join(claudeDir, "projects", "C--repo");
   await fs.promises.mkdir(claudeProject, { recursive: true });
@@ -28,10 +29,15 @@ async function world(t, { transcripts = 3, opts = {} } = {}) {
   }
   const stateDir = path.join(tmp, "state");
   const store = new SessionStore(stateDir);
-  const errorLogFile = path.join(tmp, "errors", "error-log.json");
-  const srv = createServer({ store, stateDir, port: 0, version: "3.2.0", claudeDir, errorLogFile, presenceGraceMs: 0, projectHome: tmp, ...opts });
+  const hub = new DataHub(path.join(tmp, "data"));
+  const errorStore = new LocalErrorStore(hub);
+  const srv = createServer({ store, stateDir, port: 0, version: "3.2.0", claudeDir, hub, errorStore, presenceGraceMs: 0, projectHome: tmp, ...opts });
   const { baseUrl } = await srv.listen();
-  t.after(() => srv.close());
+  // The server closes the data folder's SQLite files first; Windows cannot delete open files.
+  t.after(async () => {
+    await srv.close();
+    await fs.promises.rm(tmp, { recursive: true, force: true, maxRetries: 5 });
+  });
   const repo = path.join(tmp, "repo");
   const post = (p, body, headers = { Origin: baseUrl }) =>
     fetch(baseUrl + p, { method: "POST", headers: { "content-type": "application/json", ...headers }, body: JSON.stringify(body) });
@@ -61,7 +67,7 @@ async function world(t, { transcripts = 3, opts = {} } = {}) {
     assert.equal(res.status, 200);
     return body.project.key;
   }
-  return { tmp, repo, baseUrl, store, errorLogFile, post, get, open, entry, log, project };
+  return { tmp, repo, baseUrl, store, errorStore, post, get, open, entry, log, project };
 }
 
 test("isSeverity takes only the four ids, never prototype keys", () => {
@@ -100,7 +106,7 @@ test("a duplicate keeps the first severity and returns it; the log response carr
 });
 
 test("records are classified from the Claude session id alone, at log time", async (t) => {
-  const { open, log, entry, store, errorLogFile, post } = await world(t);
+  const { open, log, entry, store, errorStore, post } = await world(t);
   const planKey = await open("docs/superpowers/plans/2026-11-04-x.html", A);
   const plainKey = await open("notes/review.html", B);
   const interKey = await open("notes/auth-interrogation.html", id(3));
@@ -109,7 +115,7 @@ test("records are classified from the Claude session id alone, at log time", asy
   await log(entry(B, { context: "plan" }));
   await log(entry(id(3)));
   await log(entry(id(9)));
-  let records = JSON.parse(await fs.promises.readFile(errorLogFile, "utf8"));
+  let records = errorStore.records();
   assert.deepEqual(records.map((r) => [r.context, r.review_key, r.stage]), [
     ["plan", planKey, "plan"],
     ["session", plainKey, null],
@@ -120,31 +126,30 @@ test("records are classified from the Claude session id alone, at log time", asy
 
   // Relabelled after logging: the stored context stays.
   assert.equal((await post(`/api/${planKey}/stage`, { stage: "implementation" })).status, 200);
-  const list = await listErrorRecords(errorLogFile, { context: "plan" }, new Map());
+  const list = await errorStore.list({ context: "plan" }, new Map());
   assert.equal(list.total, 1);
 
   // Two review sessions attached to one Claude session: the most recently updated wins.
   const later = await open("docs/superpowers/plans/second.html", B);
   await log(entry(B));
-  records = JSON.parse(await fs.promises.readFile(errorLogFile, "utf8"));
+  records = errorStore.records();
   assert.deepEqual([records.at(-1).context, records.at(-1).review_key], ["plan", later]);
   await store.transact((state) => {
     state.sessions[plainKey].updated_at = new Date(Date.now() + 60000).toISOString();
     return [null, true];
   });
   await log(entry(B));
-  records = JSON.parse(await fs.promises.readFile(errorLogFile, "utf8"));
+  records = errorStore.records();
   assert.deepEqual([records.at(-1).context, records.at(-1).review_key], ["session", plainKey]);
 });
 
 test("a record saved before 0.3.0 (no context, no severity) is classified on read and shows as Unrated", async (t) => {
-  const { open, get, errorLogFile } = await world(t);
+  const { open, get, errorStore } = await world(t);
   const planKey = await open("specs/design.html", A);
-  await fs.promises.mkdir(path.dirname(errorLogFile), { recursive: true });
-  await fs.promises.writeFile(errorLogFile, JSON.stringify([
+  errorStore.importRecords([
     { claude_session_id: A, uuid: "old", part: 0, role: "user", kind: "text", at: null, text: "old", reason: null, reported_at: "2026-10-01T00:00:00.000Z" },
     { note: "not a record" },
-  ]));
+  ]);
   const plan = await get("/api/errors?context=plan");
   assert.equal(plan.status, 200);
   assert.deepEqual(plan.body.items.map((i) => [i.uuid, i.severity, i.review_key, i.context]), [["old", null, planKey, "plan"]]);
@@ -154,10 +159,9 @@ test("a record saved before 0.3.0 (no context, no severity) is classified on rea
 });
 
 test("an Unrated record can be rated once; High needs a reason; other origins are refused", async (t) => {
-  const { post, errorLogFile, get, baseUrl } = await world(t);
-  await fs.promises.mkdir(path.dirname(errorLogFile), { recursive: true });
+  const { post, errorStore, get, baseUrl } = await world(t);
   const old = (uuid, reason = null) => ({ claude_session_id: C, uuid, part: 0, role: "user", kind: "text", at: null, text: "t", reason, reported_at: "2026-10-01T00:00:00.000Z" });
-  await fs.promises.writeFile(errorLogFile, JSON.stringify([old("a"), old("b"), old("c", "had one")]));
+  errorStore.importRecords([old("a"), old("b"), old("c", "had one")]);
   const rate = async (body, headers) => {
     const res = await post("/api/errors/rate", { claude_session_id: C, part: 0, ...body }, headers);
     return { status: res.status, body: await res.json() };
@@ -343,51 +347,33 @@ test("GET /api/claude-sessions: limit up to 75, with review session, stage and e
   assert.deepEqual([b.review_key, b.stage, b.error_count, b.worst_severity], [null, null, 0, null]);
 });
 
-test("/errors: four ARIA tabs in a project; only Sessions outside one (D13)", async (t) => {
+test("/errors is the React shell for every project value; its tabs are covered in src/tests/pages.test.ts (D13)", async (t) => {
   const { baseUrl, project } = await world(t);
-  const res = await fetch(`${baseUrl}/errors`);
-  assert.equal(res.status, 200);
-  assert.equal(res.headers.get("x-frame-options"), "DENY");
-  const none = await res.text();
-  assert.equal(none.match(/role="tab"/g).length, 1);
-  assert.equal(none.match(/role="tabpanel"/g).length, 1);
-  assert.ok(none.includes('aria-controls="panel-sessions"'));
-  for (const tab of ["session-errors", "plan-errors", "plans"]) assert.ok(!none.includes(`panel-${tab}`), `no ${tab} panel`);
-  assert.ok(none.includes('data-mode="sessions-only"') && none.includes("see-plan error-logs"));
-
   const key = await project();
-  const html = await (await fetch(`${baseUrl}/errors?project=${key}`)).text();
-  assert.ok(html.includes('role="tablist"'));
-  assert.equal(html.match(/role="tab"/g).length, 4);
-  assert.equal(html.match(/role="tabpanel"/g).length, 4);
-  for (const name of ["Session Error Logs", "Plan Error Logs", "Plans", "Sessions"]) assert.ok(html.includes(name), name);
-  for (const h of ["session-errors", "plan-errors", "plans", "sessions"]) assert.ok(html.includes(`aria-controls="panel-${h}"`), h);
-  assert.ok(html.includes(`data-project="${key}"`) && html.includes("Project: <strong"));
-  assert.ok(html.includes(`href="/claude?project=${key}"`));
-  assert.ok(html.includes('src="/errors-client.js"') && html.includes('href="/errors.css"'));
+  for (const query of ["", `?project=${key}`, "?project=0123456789abcdef", "?project=%3Cscript%3E"]) {
+    const res = await fetch(`${baseUrl}/errors${query}`);
+    assert.equal(res.status, 200, query);
+    assert.equal(res.headers.get("x-frame-options"), "DENY");
+    assert.match(res.headers.get("content-security-policy"), /default-src 'self'.*frame-ancestors 'none'/);
+    const html = await res.text();
+    assert.ok(html.includes('<div id="root"></div>') && html.includes('src="/app/main.js"') && html.includes('href="/app/app.css"'), query);
+    assert.ok(!html.includes("<script>") && !html.includes("%3Cscript"), "the query is never written into the shell");
+  }
 
-  const listed = await (await fetch(`${baseUrl}/errors`)).text();
-  assert.ok(listed.includes(`href="/errors?project=${key}"`), "recent projects are linked in sessions-only mode");
-  const unknown = await (await fetch(`${baseUrl}/errors?project=0123456789abcdef`)).text();
-  assert.equal(unknown.match(/role="tab"/g).length, 1);
-  assert.ok(unknown.includes("isn't registered"));
-  assert.equal((await (await fetch(`${baseUrl}/errors?project=%3Cscript%3E`)).text()).match(/role="tab"/g).length, 1);
-
-  assert.ok((await (await fetch(`${baseUrl}/`)).text()).includes('href="/errors"'));
+  assert.ok((await (await fetch(`${baseUrl}/`)).text()).includes('<div id="root"></div>'), "the dashboard is the React shell; its Error logs link is asserted in src/tests/home.test.ts");
   const claude = await (await fetch(`${baseUrl}/claude`)).text();
-  assert.ok(claude.includes('href="/errors"') && claude.includes('href="/"'));
-  assert.ok((await (await fetch(`${baseUrl}/claude?project=${key}`)).text()).includes(`href="/errors?project=${key}"`));
+  assert.ok(claude.includes('<div id="root"></div>'), "/claude is the React shell; its links are asserted in src/tests/logs.test.ts");
+  assert.equal((await fetch(`${baseUrl}/claude?project=${key}`)).status, 200);
 });
 
 test("timing budgets: /api/errors warm under 50ms with 2,000 records; sessions warm under 100ms, cold under 1.5s", async (t) => {
-  const { get, errorLogFile } = await world(t, { transcripts: 75 });
+  const { get, errorStore } = await world(t, { transcripts: 75 });
   const records = Array.from({ length: 2000 }, (_, i) => ({
     claude_session_id: id((i % 75) + 1), uuid: `r-${i}`, part: 0, role: "assistant", kind: "text", at: null,
     text: "y".repeat(300), reason: null, severity: SEVERITIES[i % 4], context: i % 3 ? "session" : "plan", review_key: null, stage: null,
     reported_at: new Date(Date.UTC(2026, 0, 1) + i * 1000).toISOString(),
   }));
-  await fs.promises.mkdir(path.dirname(errorLogFile), { recursive: true });
-  await fs.promises.writeFile(errorLogFile, JSON.stringify(records));
+  errorStore.importRecords(records);
   let t0 = performance.now();
   assert.equal((await get("/api/claude-sessions?limit=75")).body.sessions.length, 75);
   const cold = performance.now() - t0;

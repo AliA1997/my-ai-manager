@@ -8,11 +8,15 @@ import { WebSocketServer } from "ws";
 import { watchArtifact } from "./artifact-watcher.js";
 import { assertHtmlFile, canonicalFile, resolveArtifactAsset } from "./artifact-path.js";
 import { injectSdk } from "./html-transform.js";
-import { createChromeHtml } from "./chrome-page.js";
-import { createLogsHtml } from "./logs-page.js";
+import { artifactTitle, chromeData } from "./chrome-page.js";
+import { HOME_USAGE } from "./guidance.js";
+import { VERSION } from "./version.js";
 import { ErrorLogError } from "./error-log.js";
 import { LocalErrorStore } from "./error-store.js";
-import { createErrorsHtml } from "./errors-page.js";
+import { DataHub } from "../helpers/data-hub.js";
+import { pageParams } from "../helpers/pagination.js";
+import { registerDataRoutes } from "./data-routes.js";
+import { APP_BUILD_HINT, appBuilt, createAppHtml } from "./app-shell.js";
 import { isSeverity, needsReason, SEVERITIES } from "./severity.js";
 import { serializeChat } from "./markdown.js";
 import { sessionKey, StoreError } from "./session-store.js";
@@ -25,7 +29,6 @@ import {
   advanceWorkflow, createWorkflow, ensureStageFile, getWorkflow, isFeatureName, listWorkflows, reopenStage,
   requirementsFile, stageFile, updateStage,
 } from "./workflow-store.js";
-import { createHomeHtml } from "./home-page.js";
 import { resolvePaths } from "./paths.js";
 import { findProjectRoot, isPlanFileName, listSuperpowersPlans } from "./project.js";
 import { getProject, isProjectKey, listProjects, registerProject } from "./project-store.js";
@@ -72,6 +75,9 @@ function enumParam(raw, allowed) {
   if (raw === undefined || raw === "") return undefined;
   return typeof raw === "string" && allowed.includes(raw) ? raw : null;
 }
+
+/** A value as a filter slug: "Needs changes" -> "needs-changes". */
+const slug = (v) => String(v ?? "none").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "none";
 
 /** Plans tab status (archived wins). */
 export function planStatus(s) {
@@ -145,6 +151,7 @@ export function createServer({
   claudeDir = process.env.CLAUDE_CONFIG_DIR ?? path.join(os.homedir(), ".claude"),
   errorLogFile = resolvePaths().errorLogFile,
   errorSearch = false, // the USE_ERROR_SEARCH feature flag: /api/errors/similar and /api/errors/store answer 404 while off
+  hub = null, // the DataHub over data/ (helpers/data-hub.js); null = a data folder inside stateDir
   errorStore = null, // src/error-store.js: Pinecone when USE_PINECONE=true and a key is set (cmdServer decides); else the file
   logDir = null, // shown in the console banner; server.log itself is opened by whoever starts the server
   agentPollMs = AGENT_POLL_MS,
@@ -161,7 +168,8 @@ export function createServer({
   idleWarnings = false, // S4: log the idle countdown at 5 min and 1 min (the server window shows it)
 }) {
   let cancelIdleWarnings = null;
-  const errors = errorStore ?? new LocalErrorStore(errorLogFile);
+  const data = hub ?? new DataHub(path.join(stateDir, "data"));
+  const errors = errorStore ?? new LocalErrorStore(data, { legacyFile: errorLogFile });
   const errorLogLabel = errors.label; // what the pages and the API name as "the error log"
   const clientEnvs = new Map(); // key -> the newest caller's environment (H2), in memory only
   /** H2: keeps the newest valid X-See-Plan-Env per session (size-capped and schema-checked; never in state.json). */
@@ -464,7 +472,8 @@ export function createServer({
   const authed = (req) => hasBearer(req) || hasCookie(req);
   const isHttps = (req) => req.seePlanForwarded === true && String(req.headers["x-forwarded-proto"] ?? "").split(",")[0].trim() === "https";
   const cookieHeader = (req, name, value, maxAge) => `${name}=${value}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${maxAge}${isHttps(req) ? "; Secure" : ""}`;
-  const publicPaths = new Set(PUBLIC_ASSETS.map((n) => `/${n}`));
+  const SERVED_ASSETS = PUBLIC_ASSETS.filter((n) => n !== "app/manifest.json"); // the manifest is for the build, not the browser
+  const publicPaths = new Set(SERVED_ASSETS.map((n) => `/${n}`));
   /** Open without a token: health, the login link, static files, and artifact frames (they carry a capability, T6). */
   function authExempt(req) {
     if (req.method !== "GET" && req.method !== "HEAD") return false;
@@ -668,6 +677,25 @@ code{background:rgba(127,127,127,.15);padding:2px 6px;border-radius:4px}ol{paddi
     }
   });
 
+  // The dashboard's one-click "Connect Claude": a small welcome page for the agent to join. The page then starts
+  // Claude on it through /api/:key/connect-claude, so nobody copies a command.
+  app.post("/api/welcome", async (req, res, next) => {
+    try {
+      if (!requireSameOrigin(req)) return res.status(403).json(errorBody("FORBIDDEN_ORIGIN", "Must come from the dashboard"));
+      const file = path.join(stateDir ?? os.tmpdir(), "welcome.html");
+      await fs.promises.writeFile(
+        file,
+        '<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Welcome to see-plan</title></head>' +
+          "<body><h1>Welcome to see-plan</h1><p>Claude is connected. Leave feedback on any part of this page, " +
+          "or create a feature from the dashboard.</p></body></html>",
+      );
+      const { session } = await openReviewSession(await canonicalFile(file), { reopen: true });
+      res.json({ ok: true, key: session.key });
+    } catch (e) {
+      next(e);
+    }
+  });
+
   /** Creates or resumes the review session for a canonical .html file, as `see-plan <file>` does. */
   async function openReviewSession(real, { reopen = false, source_file, stage } = {}) {
     const result = await store.upsertSession(real, baseUrl, { reopen, source_file, stage });
@@ -738,18 +766,34 @@ code{background:rgba(127,127,127,.15);padding:2px 6px;border-radius:4px}ol{paddi
       const severity = enumParam(req.query.severity, SEVERITY_FILTERS);
       if (context === null) return res.status(400).json(errorBody("VALIDATION_ERROR", `context must be one of ${ERROR_CONTEXTS.join(", ")}`));
       if (severity === null) return res.status(400).json(errorBody("VALIDATION_ERROR", `severity must be one of ${SEVERITY_FILTERS.join(", ")}`));
-      const limit = intParam(req.query.limit, 50, 1, 200);
-      const offset = intParam(req.query.offset, 0, 0, Number.MAX_SAFE_INTEGER);
+      const q = typeof req.query.q === "string" ? req.query.q.trim().slice(0, MAX_SIMILAR_QUERY) : "";
+      const paged = req.query.page !== undefined || req.query.pageSize !== undefined || q !== "";
+      const { page: pageNo, pageSize } = pageParams(req.query);
+      const limit = paged ? pageSize : intParam(req.query.limit, 50, 1, 200);
+      const offset = paged ? (pageNo - 1) * pageSize : intParam(req.query.offset, 0, 0, Number.MAX_SAFE_INTEGER);
       touchIdle();
       const lookup = await classificationLookup();
       let page;
       try {
-        page = await errors.list({ context, severity, limit, offset }, lookup.byClaude);
+        if (q) { // the vector index ranks the records, then the page is cut from the ranking
+          const found = await errors.similar(q, { limit: 200, context, severity }, lookup.byClaude);
+          const all = found.matches.map((m) => ({ ...m.record, score: m.score }));
+          page = { items: all.slice(offset, offset + limit), total: all.length, next_offset: offset + limit < all.length ? offset + limit : null };
+        } else {
+          page = await errors.list({ context, severity, limit, offset }, lookup.byClaude);
+        }
       } catch (e) {
         return sendErrorLogError(res, e);
       }
       const titles = await titlesFor(page.items.map((r) => r.claude_session_id));
-      res.json({ items: page.items.map((r) => errorItem(r, lookup, titles)), total: page.total, next_offset: page.next_offset });
+      res.json({
+        items: page.items.map((r) => ({ ...errorItem(r, lookup, titles), ...(r.score === undefined ? {} : { score: r.score }) })),
+        total: page.total,
+        next_offset: page.next_offset,
+        page: Math.floor(offset / limit) + 1,
+        pageSize: limit,
+        pages: Math.max(1, Math.ceil(page.total / limit)),
+      });
     } catch (e) {
       next(e);
     }
@@ -952,6 +996,7 @@ code{background:rgba(127,127,127,.15);padding:2px 6px;border-radius:4px}ol{paddi
       if (!project) return res.status(404).json(errorBody("NOT_FOUND", "Unknown project"));
       touchIdle();
       const plans = await projectPlans(project);
+      data.index("plans", plans.items, (p) => ({ id: `plan_${sessionKey(p.file)}`, text: `${p.title ?? ""} ${p.name} ${p.file}`, filter: slug(p.status) }));
       res.json({ project: projectView(project), items: plans.items, total: plans.total, next_offset: null });
     } catch (e) {
       next(e);
@@ -1741,6 +1786,7 @@ code{background:rgba(127,127,127,.15);padding:2px 6px;border-radius:4px}ol{paddi
       const limit = intParam(req.query.limit, 20, 1, 75);
       const [sessions, lookup] = await Promise.all([claudeSessions.list({ claudeDir, limit }), classificationLookup()]);
       const summary = await errorSummary(lookup);
+      data.index("sessions", sessions, (c) => ({ id: `claude_${c.id}`, text: `${c.title ?? ""} ${c.project ?? ""} ${c.cwd ?? ""}`, filter: slug(lookup.byClaude.get(c.id)?.stage ?? "none") }));
       res.json({
         sessions: sessions.map((s) => {
           const review = lookup.byClaude.get(s.id);
@@ -2064,51 +2110,55 @@ code{background:rgba(127,127,127,.15);padding:2px 6px;border-radius:4px}ol{paddi
     }
   }
 
+  // The review page is a React route (src/routes/session.tsx). The shell is the same for every session; the
+  // page's data, including the artifact capability URL, comes from /api/:key/page, behind the sign-in cookie.
   app.get("/session/:key", async (req, res, next) => {
     try {
       const session = await store.getSession(req.params.key);
       if (!session) return res.status(404).json(errorBody("NOT_FOUND", "Unknown session"));
       res.set("X-Frame-Options", "DENY");
       res.set("Content-Security-Policy", "frame-ancestors 'none'");
+      if (!appBuilt()) return res.status(503).type("text/plain").send(APP_BUILD_HINT);
+      res.type("html").send(createAppHtml({ baseUrl, title: artifactTitle(session), errorLogFile: errorLogLabel }));
+    } catch (e) {
+      next(e);
+    }
+  });
+
+  // The CLI help, for the Help page (the CLI prints it only for --help).
+  app.get("/api/help", (req, res) => {
+    if (isCrossSite(req)) return res.status(403).json(errorBody("FORBIDDEN_ORIGIN", "Cross-origin request refused"));
+    res.json({ version: VERSION, usage: HOME_USAGE });
+  });
+
+  app.get("/api/:key/page", async (req, res, next) => {
+    try {
+      if (isCrossSite(req)) {
+        return res.status(403).json(errorBody("FORBIDDEN_ORIGIN", "Cross-origin request refused"));
+      }
+      const session = await store.getSession(req.params.key);
+      if (!session) return res.status(404).json(errorBody("NOT_FOUND", "Unknown session"));
       const canResume = isClaudeSessionId(session.claude_session_id)
         && Boolean(await findTranscript(session.claude_session_id, { claudeDir }).catch(() => null));
       const workflow = session.workflow_id ? await getWorkflow(store, session.workflow_id) : null;
-      res.type("html").send(createChromeHtml(session, { baseUrl, canResume, workflow, errorLogFile: errorLogLabel, artifactBase: `/artifact/${session.key}/${capFor(token, session.key)}` }));
+      res.json(chromeData(session, { baseUrl, canResume, workflow, artifactBase: `/artifact/${session.key}/${capFor(token, session.key)}` }));
     } catch (e) {
       next(e);
     }
   });
 
-  app.get("/", (req, res) => {
-    res.set("X-Frame-Options", "DENY");
-    res.set("Content-Security-Policy", "frame-ancestors 'none'");
-    res.type("html").send(createHomeHtml({ baseUrl }));
-  });
+  registerDataRoutes(app, { hub: data, refusedCrossSite, requireSameOrigin });
 
-  app.get("/claude", async (req, res, next) => {
-    try {
+  // React pages (src/routes): one shell, rendered in the browser. SEC-6: same-origin only, no framing.
+  const APP_TITLES = { "/": "see-plan", "/claude": "Claude session logs", "/errors": "Error logs", "/notifications": "Notifications", "/help": "Help" };
+  for (const [route, title] of Object.entries(APP_TITLES)) {
+    app.get(route, (req, res) => {
       res.set("X-Frame-Options", "DENY");
-      res.set("Content-Security-Policy", "frame-ancestors 'none'");
-      const project = await projectFor(req.query.project);
-      res.type("html").send(createLogsHtml({ baseUrl, projectKey: project?.key ?? null, errorLogFile: errorLogLabel }));
-    } catch (e) {
-      next(e);
-    }
-  });
-
-  // D10/D13: with a registered ?project= the page has four tabs; without one, only Sessions.
-  app.get("/errors", async (req, res, next) => {
-    try {
-      res.set("X-Frame-Options", "DENY");
-      res.set("Content-Security-Policy", "frame-ancestors 'none'");
-      const asked = typeof req.query.project === "string" && req.query.project !== "";
-      const project = await projectFor(req.query.project);
-      const recentProjects = project ? [] : (await listProjects(store, { limit: 5 })).map(projectView);
-      res.type("html").send(createErrorsHtml({ baseUrl, project: project ? projectView(project) : null, recentProjects, unknownProject: asked && !project }));
-    } catch (e) {
-      next(e);
-    }
-  });
+      res.set("Content-Security-Policy", "default-src 'self'; img-src 'self' data:; frame-ancestors 'none'");
+      if (!appBuilt()) return res.status(503).type("text/plain").send(APP_BUILD_HINT);
+      res.type("html").send(createAppHtml({ baseUrl, title, errorLogFile: errorLogLabel }));
+    });
+  }
 
   // T6: artifact frames are sandboxed (opaque origin, so maybe no cookie): their URL carries a capability instead.
   const capOk = (req) => SESSION_KEY.test(req.params.key) && safeEqual(String(req.params.cap ?? ""), capFor(token, req.params.key));
@@ -2227,7 +2277,7 @@ code{background:rgba(127,127,127,.15);padding:2px 6px;border-radius:4px}ol{paddi
     }
   });
 
-  for (const name of PUBLIC_ASSETS) {
+  for (const name of SERVED_ASSETS) {
     app.get(`/${name}`, (req, res, next) => {
       try {
         res.set("Cache-Control", "no-cache");
@@ -2367,6 +2417,7 @@ code{background:rgba(127,127,127,.15);padding:2px 6px;border-radius:4px}ol{paddi
   function shutdown(reason = null) {
     if (closing) return closing;
     if (reason) log(`shutting down (${reason})`);
+    setImmediate(() => events.emit("closing")); // cmdServer starts its forced-exit timer on this
     closing = (async () => {
       clearInterval(pingTimer);
       clearIdle();
@@ -2403,6 +2454,7 @@ code{background:rgba(127,127,127,.15);padding:2px 6px;border-radius:4px}ol{paddi
       await new Promise((resolve) => setImmediate(resolve));
       while (background.size) await Promise.allSettled([...background]);
       await store.drain?.();
+      data.close();
     })().then(() => events.emit("closed"));
     return closing;
   }

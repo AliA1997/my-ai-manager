@@ -5,6 +5,7 @@ import path from "node:path";
 import test from "node:test";
 import { createServer } from "./helpers/authed-server.js";
 import { LocalErrorStore, createErrorStore, errorSearchEnabled, pineconeSettings } from "../src/error-store.js";
+import { DataHub } from "../helpers/data-hub.js";
 import { SessionStore } from "../src/session-store.js";
 
 test("the flags are off by default, and a key alone turns nothing on", async (t) => {
@@ -14,15 +15,23 @@ test("the flags are off by default, and a key alone turns nothing on", async (t)
   assert.equal(errorSearchEnabled({ USE_ERROR_SEARCH: "TRUE" }), true);
   assert.equal(errorSearchEnabled({ USE_PINECONE: "true" }), true);
   assert.equal(pineconeSettings({ PINECONE_API_KEY: "k" }).on, false);
-  assert.ok((await createErrorStore({ file: "x.json", env: { PINECONE_API_KEY: "k" } })) instanceof LocalErrorStore);
+  const dir = await fs.promises.mkdtemp(path.join(os.tmpdir(), "mla-flag-"));
+  const hub = new DataHub(dir);
+  t.after(async () => {
+    hub.close();
+    await fs.promises.rm(dir, { recursive: true, force: true, maxRetries: 5 });
+  });
+  assert.ok((await createErrorStore({ hub, env: { PINECONE_API_KEY: "k" } })) instanceof LocalErrorStore);
 });
 
 async function serve(t, errorSearch) {
   const dir = await fs.promises.mkdtemp(path.join(os.tmpdir(), "mla-flag-"));
-  t.after(() => fs.promises.rm(dir, { recursive: true, force: true, maxRetries: 5 }));
   const srv = createServer({ store: new SessionStore(dir), stateDir: dir, port: 0, idleTimeoutMs: 0, version: "t", claudeDir: path.join(dir, "c"), errorLogFile: path.join(dir, "e.json"), errorSearch });
   const { port } = await srv.listen();
-  t.after(() => srv.close());
+  t.after(async () => {
+    await srv.close();
+    await fs.promises.rm(dir, { recursive: true, force: true, maxRetries: 5 });
+  });
   return `http://127.0.0.1:${port}`;
 }
 

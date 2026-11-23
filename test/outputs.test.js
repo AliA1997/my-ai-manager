@@ -9,9 +9,13 @@ import { MAX_CSV_ROWS, MAX_OUTPUTS, kindOf, outputIdFor, outputsOf, parseCsv, pl
 import { listOutputRevisions, readOutputRevision, saveOutputRevision } from "../src/revisions.js";
 import { SessionStore, StoreError } from "../src/session-store.js";
 
+// Cleanups run last-registered first, so a server (and the SQLite files it holds) closes before its folder is removed.
+const cleanups = [];
+
 async function tmp(t) {
   const dir = await fs.promises.realpath(await fs.promises.mkdtemp(path.join(os.tmpdir(), "mla-out-")));
-  t.after(() => fs.promises.rm(dir, { recursive: true, force: true, maxRetries: 5 }));
+  cleanups.push(() => fs.promises.rm(dir, { recursive: true, force: true, maxRetries: 5 }));
+  t.after(async () => { for (const c of cleanups.splice(0).reverse()) await c(); });
   return dir;
 }
 
@@ -21,7 +25,7 @@ async function startServer(t) {
   const store = new SessionStore(stateDir);
   const srv = createServer({ store, stateDir, port: 0, idleTimeoutMs: 0, version: "t", claudeDir: path.join(dir, "claude"), errorLogFile: path.join(dir, "e.json") });
   const { port } = await srv.listen();
-  t.after(() => srv.close());
+  cleanups.push(() => srv.close());
   const base = `http://127.0.0.1:${port}`;
   const post = (p, body, headers = {}) => fetch(`${base}${p}`, { method: "POST", headers: { "content-type": "application/json", ...headers }, body: JSON.stringify(body) });
   return { dir, store, base, post, srv, port };
@@ -130,8 +134,8 @@ test("server: outputs are added, served by capability, tagged on notes, and relo
   assert.equal((await post(`/api/${key}/outputs`, { files: [path.join(dir, "a.exe")] })).status, 400, "unknown kind");
   assert.equal((await post(`/api/${key}/outputs`, { files: [path.join(dir, "gone.txt")] })).status, 400, "missing file");
 
-  const page = await (await fetch(`${base}/session/${key}`)).text();
-  const cap = /artifact\/[0-9a-f]{16}\/([0-9a-f]{32})\/index\.html/.exec(page)[1];
+  const page = await (await fetch(`${base}/api/${key}/page`)).text();
+  const cap = /artifact\/[0-9a-f]{16}\/([0-9a-f]{32})/.exec(page)[1];
   const art = (rest) => `${base}/artifact/${key}/${cap}/o/${rest}`;
 
   const mm = await rawFetch(art("flow-mmd/index.html"));
@@ -198,7 +202,7 @@ test("oversized outputs show a placeholder", async (t) => {
   await fs.promises.writeFile(big, Buffer.alloc(5 * 1024 * 1024 + 1, 97));
   const { key } = await (await post("/api/sessions", { file: primary })).json();
   await post(`/api/${key}/outputs`, { files: [big] });
-  const cap = /artifact\/[0-9a-f]{16}\/([0-9a-f]{32})\//.exec(await (await fetch(`${base}/session/${key}`)).text())[1];
+  const cap = /artifact\/[0-9a-f]{16}\/([0-9a-f]{32})/.exec(await (await fetch(`${base}/api/${key}/page`)).text())[1];
   const html = await (await rawFetch(`${base}/artifact/${key}/${cap}/o/big-log/index.html`)).text();
   assert.ok(html.includes("over the 5.0 MB limit") && !html.includes("aaaa"));
 });

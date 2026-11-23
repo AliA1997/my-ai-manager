@@ -1,0 +1,4 @@
+schema_version: "1.1"
+name: confirms-before-reporting
+expected_outcome: |
+  The innerHTML hit is confirmed by reading the cited line and reported with its context, not blindly as high.

@@ -96,14 +96,12 @@ test("chrome page is framed safely", async (t) => {
   assert.equal(r.headers.get("x-frame-options"), "DENY");
   assert.match(r.headers.get("content-security-policy"), /frame-ancestors 'none'/);
   const body = await r.text();
-  assert.ok(body.includes('sandbox="allow-scripts allow-forms allow-popups"'));
-  assert.ok(!body.includes("allow-same-origin"));
+  assert.ok(body.includes('<div id="root">') && body.includes('/app/main.js'), "the React shell");
   assert.ok(body.includes("<title>My Plan</title>"));
-  assert.ok(body.includes("Send to Agent"));
-  assert.ok(body.includes("Send &amp; End"));
-  assert.ok(body.includes('id="sendHint"'));
-  assert.ok(/id="endedBanner"[^>]*hidden/.test(body) && body.includes(">Session ended<"));
-  assert.ok(body.includes(`/artifact/${key}/${capFor(tokenFor(new URL(baseUrl).port), key)}/index.html?rev=0`));
+  assert.ok(!body.includes("allow-same-origin") && !body.includes("<iframe"));
+  const page = await (await fetch(`${baseUrl}/api/${key}/page`)).json();
+  assert.equal(page.artifact_base, `/artifact/${key}/${capFor(tokenFor(new URL(baseUrl).port), key)}`);
+  assert.equal(page.revision, 0);
   assert.equal((await fetch(`${baseUrl}/session/0000000000000000`)).status, 404);
 });
 
@@ -155,7 +153,7 @@ test("origin guard", async (t) => {
 
 test("public files are served with no-cache", async (t) => {
   const { baseUrl } = await setup(t);
-  for (const p of ["/sdk.js", "/chrome-client.js", "/chrome.css"]) {
+  for (const p of ["/sdk.js", "/app/main.js", "/app/app.css"]) {
     const r = await fetch(baseUrl + p);
     assert.equal(r.status, 200, p);
     assert.equal(r.headers.get("cache-control"), "no-cache");

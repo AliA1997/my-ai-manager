@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Builds dist/see-plan[.exe]: a Node single executable application (SEA) with every public/ file as an asset.
-//   1. write src/version.js   2. bundle to dist/see-plan.cjs (esbuild, CJS)   3. write sea-config.json
+//   0. build the React app (public/app)   1. write src/version.js   2. bundle to dist/see-plan.cjs (esbuild, CJS)   3. write sea-config.json
 //   4. node --experimental-sea-config   5. copy this node binary   6. inject the blob (postject)
 //   7. write dist/THIRD_PARTY_LICENSES.txt (dependencies + Node.js)
 import { execFileSync } from "node:child_process";
@@ -9,7 +9,6 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
 import { inject } from "postject";
-import { PUBLIC_ASSETS } from "../src/assets.js";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DIST = path.join(ROOT, "dist");
@@ -26,6 +25,9 @@ function step(msg) {
 
 fs.rmSync(DIST, { recursive: true, force: true });
 fs.mkdirSync(DIST, { recursive: true });
+
+step("react app");
+execFileSync(process.execPath, [path.join(ROOT, "scripts", "build-app.js")], { stdio: "inherit" });
 
 step("version");
 execFileSync(process.execPath, [path.join(ROOT, "scripts", "write-version.js")], { stdio: "inherit" });
@@ -50,6 +52,8 @@ await build({
 });
 
 step("sea-config.json");
+// Imported only now: PUBLIC_ASSETS reads the manifest that build-app.js just wrote.
+const { PUBLIC_ASSETS } = await import("../src/assets.js");
 const assets = Object.fromEntries(PUBLIC_ASSETS.map((name) => [name, path.join(ROOT, "public", name)]));
 fs.writeFileSync(configFile, JSON.stringify({
   main: bundle,

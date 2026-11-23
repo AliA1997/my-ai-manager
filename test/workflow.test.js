@@ -207,8 +207,7 @@ test("dashboard, session list, archive, prune, and home events", async (t) => {
   const home = await fetch(c.baseUrl + "/");
   assert.equal(home.status, 200);
   const html = await home.text();
-  assert.ok(html.includes('id="features"') && html.includes('src="/home-client.js"'));
-  for (const asset of ["home-client.js", "home.css"]) assert.equal((await fetch(`${c.baseUrl}/${asset}`)).status, 200);
+  assert.ok(html.includes('id="root"') && html.includes('src="/app/main.js"'), "the dashboard is the React shell");
   const list = await c.get("/api/sessions");
   assert.deepEqual(Object.keys(list.sessions[0]).sort(), ["agent", "ended_by", "file", "key", "stage", "stage_source", "status", "updated_at", "url", "workflow_id"]);
 

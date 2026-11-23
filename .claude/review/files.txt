@@ -1,0 +1,7 @@
+6 files vs HEAD (301 added lines)
+backend     65  .claude/skills/review-code/scripts/scan.mjs  (new)
+backend     57  .claude/skills/review-code/scripts/discover.mjs  (new)
+backend     55  .claude/skills/implement-code/scripts/digest.mjs  (new)
+backend     49  .claude/skills/implement-code/scripts/scaffold.mjs  (new)
+backend     41  .claude/skills/review-code/scripts/lib.mjs  (new)
+backend     34  .claude/skills/review-code/scripts/jev-sweep.mjs  (new)
