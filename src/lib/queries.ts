@@ -66,11 +66,14 @@ export const plansQuery = (project: string) =>
     refetchInterval: REFRESH_MS,
   });
 
-export const sessionsQuery = () =>
+export const sessionsQuery = (search: Pick<ListSearch, 'q' | 'filter'> = {}) =>
   queryOptions({
-    queryKey: ['claude-sessions'],
+    queryKey: ['claude-sessions', search.q ?? '', search.filter ?? ''],
     queryFn: ({ signal }) =>
-      getJson<{ sessions: SessionItem[] }>(`/api/claude-sessions${queryString({ limit: 75 })}`, signal),
+      getJson<{ sessions: SessionItem[] }>(
+        `/api/claude-sessions${queryString({ limit: 75, q: search.q, filter: search.filter })}`,
+        signal,
+      ),
     refetchInterval: REFRESH_MS,
   });
 

@@ -4,7 +4,7 @@ import { defaultDir, sortWorkflows, splitSessions } from '../../lib/home';
 import { useHomePush } from '../../lib/home-socket';
 import { homeQuery } from '../../lib/queries';
 import { action } from '../../routes/home';
-import { linkClass, PageHeader, PageLink } from '../shared/PageHeader';
+import { PageHeader } from '../shared/PageHeader';
 import { StatusLine } from '../shared/StatusLine';
 import { AgentStrip } from './AgentStrip';
 import { ConnectClaudeDialog } from './ConnectClaudeDialog';
@@ -55,15 +55,11 @@ export function HomePage() {
 
   return (
     <>
-      <title>see-plan</title>
+      <title>Claude Manager</title>
       <PageHeader
-        title="see-plan"
+        title="Claude Manager"
         links={
           <>
-            <a href="/claude" className={linkClass}>
-              Claude logs
-            </a>
-            <PageLink to="/errors">Error logs</PageLink>
             <button
               type="button"
               onClick={onOpen}

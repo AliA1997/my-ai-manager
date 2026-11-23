@@ -55,7 +55,7 @@ function DecisionForm({ choice, onClose }: { choice: Choice; onClose: () => void
         setForce(true);
         setError(`${e.message || 'Notes have not reached the agent yet'}. Approve anyway?`);
       } else {
-        setError(e instanceof Error ? e.message : 'Could not reach see-plan.');
+        setError(e instanceof Error ? e.message : 'Could not reach Claude Manager.');
       }
     },
   });

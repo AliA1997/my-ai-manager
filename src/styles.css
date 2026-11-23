@@ -1,15 +1,15 @@
 @import 'tailwindcss';
 
-/* Design tokens, copied from the pages this replaces (errors.css). Dark mode swaps the variables, not the classes. */
+/* Design tokens, taken from the demo page (examples/plan.html). Dark mode swaps the variables, not the classes. */
 :root {
   color-scheme: light dark;
-  --page: #f6f3ee;
-  --surface: #fffdf9;
-  --fg: #2b2620;
-  --muted: #6b6155; /* 4.5:1 on --page (A11Y-6) */
-  --line: #e2d9cb;
-  --accent: #c8963e;
-  --link: #8a5a12;
+  --page: #ffffff;
+  --surface: #f3f5f9;
+  --fg: #1d2330;
+  --muted: #5a6475; /* 4.5:1 on --page (A11Y-6) */
+  --line: #c9d0dc;
+  --accent: #2f6fed;
+  --link: #2f6fed;
   --danger: #b3261e;
   --sev-low: #e8730c;
   --sev-low-fg: #000000;
@@ -25,13 +25,13 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --page: #181614;
-    --surface: #1f1c19;
-    --fg: #ece6dc;
-    --muted: #a69c8e;
-    --line: #3a342d;
-    --accent: #d6a752;
-    --link: #e2b96a;
+    --page: #12151c;
+    --surface: #1b202b;
+    --fg: #e6e9ef;
+    --muted: #9aa4b5;
+    --line: #3a4252;
+    --accent: #7aa2ff;
+    --link: #7aa2ff;
     --danger: #f2b8b5;
     --sev-low: #ff9a3d;
     --sev-medium: #ffc94d;

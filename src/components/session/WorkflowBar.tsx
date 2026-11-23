@@ -35,7 +35,7 @@ export const WorkflowBar = memo(function WorkflowBar() {
         },
       });
     } catch (e) {
-      s.hint(e instanceof Error ? e.message : 'Could not reach see-plan.', true);
+      s.hint(e instanceof Error ? e.message : 'Could not reach Claude Manager.', true);
     }
   };
   return (

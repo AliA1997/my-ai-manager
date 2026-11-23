@@ -4,6 +4,20 @@
 
 The rest of the 2026-11-03 plan (`docs/superpowers/plans/2026-11-03-logs-sessions-plans-fixes.md`, Tasks 2–4): log hand-off, session management and plan management. Its stage inference for plan folders and its Claude-session cache shipped early (0.3.0, and again in 3.2.0).
 
+## [4.3.0] - 2026-11-22
+
+Search on every list page, one navigation bar, the demo page's colours and a new name. Not breaking.
+
+### Added
+- **Similarity search and a stage filter on the Claude logs page and the Recent sessions list,** using the local vector index. Errors and Notifications already had the shared filter. `GET /api/claude-sessions` accepts `q` and `filter`.
+
+### Changed
+- **The app is now called Claude Manager.** The command is still `see-plan`.
+- **The colours match the demo page** (`examples/plan.html`), light and dark.
+
+### Fixed
+- **Claude logs, Error logs and Notifications were listed twice** in the header on some pages. The bar now shows each once.
+
 ## [4.2.0] - 2026-11-22
 
 Local data folder, notifications and a shared search filter. Not breaking: an existing `error-log.json` is imported on first start.

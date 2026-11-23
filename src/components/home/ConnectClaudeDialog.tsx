@@ -46,8 +46,8 @@ export function ConnectClaudeDialog({ dialogRef: ref }: Props) {
         Connect your Claude agent
       </h2>
       <p className="mb-5 text-muted">
-        see-plan is where you and your Claude agent give each other feedback, look over past sessions and work
-        out how to improve them. Connect Claude to get started.
+        Claude Manager is where you and your Claude agent give each other feedback, look over past sessions
+        and work out how to improve them. Connect Claude to get started.
       </p>
       <button
         type="button"

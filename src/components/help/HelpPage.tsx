@@ -10,7 +10,7 @@ export function HelpPage() {
   const commands = useMemo(() => parseUsage(data.usage), [data.usage]);
   return (
     <>
-      <title>Help · see-plan</title>
+      <title>Help · Claude Manager</title>
       <PageHeader title="Help" />
       <main className="mx-auto flex max-w-5xl flex-col gap-6 px-6 pb-12">
         <section aria-labelledby="start-title" className="flex flex-col gap-2">

@@ -23,7 +23,7 @@ function FeedbackForm({ onClose }: { onClose: () => void }) {
       if (res.chat) s.push({ type: 'chat', chat: res.chat });
       s.hint('Thanks. Your session feedback was sent to the agent.');
     },
-    onError: (e) => setError(e instanceof Error ? e.message : 'Could not reach see-plan.'),
+    onError: (e) => setError(e instanceof Error ? e.message : 'Could not reach Claude Manager.'),
   });
 
   const toggle = (value: string): void =>

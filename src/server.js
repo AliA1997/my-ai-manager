@@ -16,6 +16,7 @@ import { LocalErrorStore } from "./error-store.js";
 import { DataHub } from "../helpers/data-hub.js";
 import { pageParams } from "../helpers/pagination.js";
 import { registerDataRoutes } from "./data-routes.js";
+import { narrowSessions } from "../helpers/session-filter.js";
 import { APP_BUILD_HINT, appBuilt, createAppHtml } from "./app-shell.js";
 import { isSeverity, needsReason, SEVERITIES } from "./severity.js";
 import { serializeChat } from "./markdown.js";
@@ -1788,7 +1789,7 @@ code{background:rgba(127,127,127,.15);padding:2px 6px;border-radius:4px}ol{paddi
       const summary = await errorSummary(lookup);
       data.index("sessions", sessions, (c) => ({ id: `claude_${c.id}`, text: `${c.title ?? ""} ${c.project ?? ""} ${c.cwd ?? ""}`, filter: slug(lookup.byClaude.get(c.id)?.stage ?? "none") }));
       res.json({
-        sessions: sessions.map((s) => {
+        sessions: narrowSessions(data, sessions, req.query, (s) => slug(lookup.byClaude.get(s.id)?.stage ?? "none")).map((s) => {
           const review = lookup.byClaude.get(s.id);
           const errors = summary.bySession.get(s.id);
           return {

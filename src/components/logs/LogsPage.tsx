@@ -10,18 +10,22 @@ import {
   projectLabel,
   refOf,
   resolveSessionId,
+  SESSION_FILTERS,
   statusMessage,
   withLogged,
 } from '../../lib/logs';
 import { logKey, logQuery, sessionsQuery } from '../../lib/queries';
 import type { LogRow, LogState, SessionItem, Severity } from '../../lib/types';
 import { action } from '../../routes/logs';
+import { DataFilter, type FilterOption } from '../shared/DataFilter';
 import { PageHeader } from '../shared/PageHeader';
 import { StatusLine } from '../shared/StatusLine';
 import { EntryRow } from './EntryRow';
 import { LogEntryDialog } from './LogEntryDialog';
 
 const route = getRouteApi('/claude');
+
+const STAGE_OPTIONS: readonly FilterOption[] = SESSION_FILTERS;
 
 const optionLabel = (s: SessionItem): string =>
   [clip(s.title ?? '(no prompt)', 70), projectLabel(s), s.modified_at ? timeAgo(s.modified_at) : '']
@@ -162,29 +166,48 @@ function Transcript({ id, sessions }: { id: string; sessions: SessionItem[] }) {
 /** The /claude page: one Claude session's transcript, newest at the bottom; a click logs an entry as an error. */
 export function LogsPage() {
   const search = route.useSearch();
-  const { data } = useSuspenseQuery(sessionsQuery());
+  const navigate = route.useNavigate();
+  const { data } = useSuspenseQuery(sessionsQuery({ q: search.q, filter: search.filter }));
   const id = resolveSessionId(search.id, data.sessions);
   const errorsLink = search.project ? `/errors?project=${encodeURIComponent(search.project)}` : '/errors';
+  const onFilter = useCallback(
+    (next: { q: string; filter: string }) =>
+      void navigate({
+        search: (prev) => ({
+          ...prev,
+          id: undefined,
+          q: next.q || undefined,
+          filter: next.filter || undefined,
+        }),
+      }),
+    [navigate],
+  );
 
   return (
     <>
-      <PageHeader
-        title="Claude session logs"
-        links={
-          <a
-            href={errorsLink}
-            className="text-link underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-accent"
-          >
-            Error logs
-          </a>
-        }
-      />
+      <PageHeader title="Claude session logs" errorsHref={errorsLink} />
+      <div className="px-6">
+        <DataFilter
+          label="Search and filter Claude sessions"
+          selectLabel="Stage"
+          options={STAGE_OPTIONS}
+          q={search.q ?? ''}
+          filter={search.filter ?? ''}
+          onChange={onFilter}
+        />
+      </div>
       {id ? (
         <Transcript key={id} id={id} sessions={data.sessions} />
       ) : (
         <>
           <title>Claude session logs</title>
-          <StatusLine message="No Claude sessions found in ~/.claude/projects." />
+          <StatusLine
+            message={
+              search.q || search.filter
+                ? 'No Claude sessions match this search.'
+                : 'No Claude sessions found in ~/.claude/projects.'
+            }
+          />
         </>
       )}
     </>

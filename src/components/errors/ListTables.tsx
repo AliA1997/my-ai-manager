@@ -64,7 +64,7 @@ export const PlansTable = memo(function PlansTable({ items, onOpen, busy }: Plan
                     <button
                       type="button"
                       disabled={busy}
-                      aria-label={`Open ${p.name} in see-plan`}
+                      aria-label={`Open ${p.name} in Claude Manager`}
                       onClick={() => onOpen(p)}
                       className="rounded-md border border-line px-2 py-0.5 text-fg hover:bg-surface focus-visible:outline-2 focus-visible:outline-accent"
                     >

@@ -28,7 +28,7 @@ export const PageHeader = memo(function PageHeader({
   return (
     <header className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-6 py-4">
       <div>
-        <p className="text-xs font-medium tracking-wide text-muted uppercase">see-plan</p>
+        <p className="text-xs font-medium tracking-wide text-muted uppercase">Claude Manager</p>
         <h1 className="text-xl font-semibold text-fg">{title}</h1>
       </div>
       <nav aria-label="Pages" className="flex flex-wrap items-center gap-1">

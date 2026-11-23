@@ -6,7 +6,7 @@ import { action } from '../../routes/notifications';
 import type { DeletionRule, NotificationItem } from '../../lib/types';
 import { formatDate } from '../../lib/format';
 import { DataFilter, type FilterOption } from '../shared/DataFilter';
-import { PageHeader, PageLink } from '../shared/PageHeader';
+import { PageHeader } from '../shared/PageHeader';
 import { Pager } from '../shared/Pager';
 import { StatusLine } from '../shared/StatusLine';
 
@@ -188,14 +188,7 @@ export function NotificationsPage() {
   return (
     <>
       <title>Notifications</title>
-      <PageHeader
-        title="Notifications"
-        links={
-          <>
-            <PageLink to="/errors">Error logs</PageLink>
-          </>
-        }
-      />
+      <PageHeader title="Notifications" />
       <StatusLine message={message} isError={Boolean(markRead.error)} />
       <main className="px-6 pb-12">
         <section aria-labelledby="list-title">
