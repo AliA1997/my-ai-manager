@@ -17,10 +17,22 @@ type Props = {
   onOpen: (entry: LogRow) => void;
 };
 
-const kindClass: Record<string, string> = {
-  tool_use: 'border-l-line italic',
-  tool_result: 'border-l-line text-muted',
+type Tone = { row: string; label: string };
+
+/** UX-9: each entry type has its own stripe and label colour (Lavish Axi log-* tokens); body text stays at full contrast. */
+const USER: Tone = { row: 'border-l-log-user bg-user-bg', label: 'text-log-user' };
+const TONES: Record<string, Tone> = {
+  user: USER,
+  assistant: { row: 'border-l-log-assistant bg-surface', label: 'text-log-assistant' },
+  tool_use: { row: 'border-l-log-tool bg-code-bg', label: 'text-log-tool' },
+  tool_result: { row: 'border-l-log-result bg-code-bg', label: 'text-log-result' },
+  system: { row: 'border-l-log-system bg-surface', label: 'text-log-system' },
+  error: { row: 'border-l-log-error bg-surface', label: 'text-log-error' },
 };
+
+function toneOf(entry: LogRow): Tone {
+  return TONES[entry.kind ?? ''] ?? TONES[entry.role ?? ''] ?? USER;
+}
 
 /**
  * One transcript entry. The text is a text node (the transcript is untrusted, SEC-4). An entry that can be logged
@@ -38,8 +50,7 @@ export const EntryRow = memo(function EntryRow({
 }: Props) {
   const ref = refOf(entry);
   const loggable = ref !== '';
-  const tone = kindClass[entry.kind ?? ''] ?? '';
-  const side = entry.role === 'assistant' ? 'border-l-accent' : 'border-l-fg';
+  const tone = toneOf(entry);
 
   const onClick = (event: MouseEvent<HTMLElement>) => {
     const selection = window.getSelection();
@@ -61,7 +72,7 @@ export const EntryRow = memo(function EntryRow({
             role: 'button',
             onClick,
             onKeyDown,
-            'aria-label': `${roleLabel(entry)}: ${note ? 'add a note or log it' : 'log this entry as an error'}`,
+            'aria-description': `${note ? 'add a note or log it' : 'log this entry as an error'}`,
             title: `${entry.at ? `${formatDate(entry.at)}\n` : ''}${
               note
                 ? 'Click to add a note, send it to the agent, or log it as an error'
@@ -69,17 +80,21 @@ export const EntryRow = memo(function EntryRow({
             }`,
           }
         : {})}
-      className={`my-2 rounded-md border border-l-4 border-line bg-surface p-3 ${side} ${tone} ${
-        loggable ? 'cursor-pointer hover:bg-page focus-visible:outline-2 focus-visible:outline-accent' : ''
+      className={`my-2 p-3 border border-l-4 border-line rounded-lg ${tone.row} ${
+        loggable
+          ? 'cursor-pointer hover:brightness-95 focus-visible:outline-2 focus-visible:outline-accent'
+          : ''
       } ${saving ? 'opacity-50' : ''}`}
     >
       <div className="mb-1 flex flex-wrap items-center gap-2 text-xs text-muted">
-        <span className="font-semibold text-fg">{roleLabel(entry)}</span>
+        <span className={`font-bold tracking-wide uppercase ${tone.label}`}>{roleLabel(entry)}</span>
         {entry.at ? <time>{formatTime(entry.at)}</time> : null}
         {logged ? <SeverityBadge severity={severity} /> : null}
         {sent ? <span>Sent to agent</span> : null}
       </div>
-      <div className="text-sm break-words whitespace-pre-wrap text-fg">{entry.text ?? ''}</div>
+      <div className="font-mono text-[12.5px] leading-[19px] break-words whitespace-pre-wrap text-fg">
+        {entry.text ?? ''}
+      </div>
     </article>
   );
 });

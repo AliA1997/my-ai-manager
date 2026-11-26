@@ -5,7 +5,7 @@ import type { HomeSession, Workflow } from '../../lib/types';
 import { linkClass } from '../shared/PageHeader';
 
 const pillClass = {
-  approved: 'bg-accent text-black',
+  approved: 'bg-accent text-accent-fg',
   ended: 'bg-line text-fg',
   'notes waiting': 'bg-sev-medium text-sev-medium-fg',
   open: 'border border-line text-fg',

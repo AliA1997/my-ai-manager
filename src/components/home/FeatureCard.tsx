@@ -52,7 +52,7 @@ export const FeatureCard = memo(function FeatureCard({
       {currentSession && workflow.current ? (
         <a
           href={currentSession.url}
-          className="inline-block rounded-md bg-accent px-3 py-1 font-medium text-black hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+          className="inline-block rounded-md bg-accent px-3 py-1 font-medium text-accent-fg hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
         >
           Open {STAGE_TITLES[workflow.current]} →
         </a>

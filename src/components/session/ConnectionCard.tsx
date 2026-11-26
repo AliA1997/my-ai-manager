@@ -4,7 +4,7 @@ import { useSessionContext } from './useSession';
 
 const button =
   'rounded-md border border-line px-3 py-1 text-fg hover:bg-page focus-visible:outline-2 focus-visible:outline-accent disabled:opacity-50';
-const primary = `${button} bg-accent font-medium text-black hover:opacity-90`;
+const primary = `${button} bg-accent font-medium text-accent-fg! hover:opacity-90`;
 
 const dot: Record<string, string> = {
   connected: 'bg-green-600',

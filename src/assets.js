@@ -3,7 +3,7 @@ import path from "node:path";
 import * as nodeSea from "node:sea";
 import { fileURLToPath } from "node:url";
 
-const BASE_ASSETS = ["sdk.js", "logs-client.js", "logs.css", "home-client.js", "home.css", "errors-client.js", "errors.css", "data-filter.js", "notifications-client.js", "output-render.js", "vendor/mermaid.min.js"];
+const BASE_ASSETS = ["sdk.js", "output-render.js", "vendor/mermaid.min.js"];
 
 /** Written by scripts/build-app.js: every file of the React bundle (public/app/). */
 const APP_MANIFEST = "app/manifest.json";

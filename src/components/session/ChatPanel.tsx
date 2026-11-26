@@ -19,7 +19,7 @@ const Bubble = memo(function Bubble({ entry }: { entry: ChatEntry }) {
     );
   }
   return (
-    <div title={entry.at ?? undefined} className="ml-6 rounded-lg bg-accent p-2 text-black">
+    <div title={entry.at ?? undefined} className="ml-6 rounded-lg bg-accent p-2 text-accent-fg">
       {entry.anchor ? <div className="mb-1 text-xs opacity-80">{String(entry.anchor)}</div> : null}
       <div className="break-words whitespace-pre-wrap">{String(entry.text ?? '')}</div>
     </div>
@@ -32,6 +32,7 @@ export const ChatPanel = memo(function ChatPanel() {
   const rounds: HistoryRound[] = s.page.history;
   return (
     <div
+      id="chat-panel"
       role="tabpanel"
       aria-labelledby="tab-chat"
       hidden={s.ui.tab !== 'chat'}

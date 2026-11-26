@@ -86,7 +86,7 @@ function NoteForm({
           type="button"
           disabled={!canSend}
           onClick={() => onChoose({ toAgent: true, asError: false }, severity, note.trim())}
-          className={`${button} bg-accent font-medium text-black hover:opacity-90`}
+          className={`${button} bg-accent font-medium text-accent-fg! hover:opacity-90`}
         >
           Send to agent
         </button>

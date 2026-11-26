@@ -14,7 +14,7 @@ const EXAMPLE = path.join(ROOT, "examples", "plan.html");
 const binIndex = process.argv.indexOf("--bin");
 let EXE = binIndex >= 0 ? path.resolve(process.argv[binIndex + 1]) : null;
 if (EXE && process.platform === "win32" && !EXE.endsWith(".exe") && fs.existsSync(`${EXE}.exe`)) EXE += ".exe";
-const ASSETS = ["sdk.js", "logs-client.js", "logs.css", "home-client.js", "home.css", "errors-client.js", "errors.css", "output-render.js", "vendor/mermaid.min.js"];
+const ASSETS = ["sdk.js", "output-render.js", "vendor/mermaid.min.js"];
 
 function freePort() {
   return new Promise((resolve, reject) => {

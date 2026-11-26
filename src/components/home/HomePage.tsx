@@ -55,15 +55,15 @@ export function HomePage() {
 
   return (
     <>
-      <title>Claude Manager</title>
+      <title>My AI Manager</title>
       <PageHeader
-        title="Claude Manager"
+        title="My AI Manager"
         links={
           <>
             <button
               type="button"
               onClick={onOpen}
-              className="rounded-md bg-accent px-3 py-1 font-medium text-black hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+              className="rounded-md bg-accent px-3 py-1 font-medium text-accent-fg hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
             >
               + New feature
             </button>

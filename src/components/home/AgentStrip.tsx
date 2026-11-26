@@ -27,7 +27,7 @@ export const AgentStrip = memo(function AgentStrip({
         <button
           type="button"
           onClick={onConnect}
-          className="rounded-md bg-accent px-3 py-1 font-medium text-black hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+          className="rounded-md bg-accent px-3 py-1 font-medium text-accent-fg hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
         >
           Connect Claude
         </button>

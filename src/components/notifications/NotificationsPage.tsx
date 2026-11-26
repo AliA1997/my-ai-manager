@@ -148,7 +148,7 @@ function SettingsForm({ rule, dir, onSaved }: { rule: DeletionRule; dir: string;
         <button
           type="submit"
           disabled={save.isPending}
-          className="self-start rounded-md bg-accent px-4 py-2 font-medium text-black hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-50"
+          className="self-start rounded-md bg-accent px-4 py-2 font-medium text-accent-fg hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-50"
         >
           Save settings
         </button>

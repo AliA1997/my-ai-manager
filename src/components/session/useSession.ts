@@ -111,7 +111,7 @@ export function useSessionContext(): SessionController {
 }
 
 const message = (e: unknown): string => (e instanceof Error ? e.message : String(e));
-const unreachable = (e: unknown): string => `Could not reach Claude Manager: ${message(e)}`;
+const unreachable = (e: unknown): string => `Could not reach My AI Manager: ${message(e)}`;
 
 /** What the frame needs to be told each time it loads, and what to remember between loads. Not shown, so not state. */
 type FrameMemory = {
@@ -332,7 +332,7 @@ export function useSession(page: SessionPage, baseUrl: string): SessionControlle
       const res = await run({ intent: 'stage', key, stage: next });
       store.push({ type: 'stage', stage: res.stage ?? null, source: res.stageSource ?? null });
     } catch (e) {
-      hint(e instanceof ApiError ? e.message : 'Could not reach Claude Manager.', true);
+      hint(e instanceof ApiError ? e.message : 'Could not reach My AI Manager.', true);
     }
   };
 

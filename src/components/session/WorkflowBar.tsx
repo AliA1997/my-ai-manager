@@ -35,7 +35,7 @@ export const WorkflowBar = memo(function WorkflowBar() {
         },
       });
     } catch (e) {
-      s.hint(e instanceof Error ? e.message : 'Could not reach Claude Manager.', true);
+      s.hint(e instanceof Error ? e.message : 'Could not reach My AI Manager.', true);
     }
   };
   return (
@@ -109,7 +109,7 @@ export const NextStageNotice = memo(function NextStageNotice() {
         <button
           type="button"
           onClick={() => void open()}
-          className="rounded-md bg-accent px-3 py-1 font-medium text-black hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+          className="rounded-md bg-accent px-3 py-1 font-medium text-accent-fg hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
         >
           {go}
         </button>

@@ -1,6 +1,6 @@
-# Claude Manager (my-lavish-axi)
+# My AI Manager (my-lavish-axi)
 
-Claude Manager is a CLI built for AI agents (the command is still `see-plan`). The agent writes an HTML artifact (a plan, diagram, table, report) and runs `see-plan <file.html>`. A local browser page opens; the human clicks elements or selects text to leave notes, chats, and presses **Send to Agent**. Meanwhile the agent waits in `see-plan poll <file.html>`, which returns the feedback as structured data.
+My AI Manager is a CLI built for AI agents (the command is still `see-plan`). The agent writes an HTML artifact (a plan, diagram, table, report) and runs `see-plan <file.html>`. A local browser page opens; the human clicks elements or selects text to leave notes, chats, and presses **Send to Agent**. Meanwhile the agent waits in `see-plan poll <file.html>`, which returns the feedback as structured data.
 
 This is a small re-implementation of the core loop of [lavish-axi](https://github.com/kunchenguid/lavish-axi).
 

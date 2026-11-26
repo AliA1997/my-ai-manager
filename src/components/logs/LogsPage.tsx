@@ -114,7 +114,7 @@ function Transcript({ id, sessions }: { id: string; sessions: SessionItem[] }) {
             id="session-select"
             value={id}
             onChange={onPick}
-            className="max-w-md rounded-md border border-line bg-surface px-2 py-1 text-fg focus-visible:outline-2 focus-visible:outline-accent"
+            className="w-full min-w-0 max-w-md rounded-md border border-line bg-surface px-2 py-1 text-fg focus-visible:outline-2 focus-visible:outline-accent"
           >
             {list.map((s) => (
               <option key={s.id} value={s.id}>

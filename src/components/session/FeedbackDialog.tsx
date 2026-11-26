@@ -23,7 +23,7 @@ function FeedbackForm({ onClose }: { onClose: () => void }) {
       if (res.chat) s.push({ type: 'chat', chat: res.chat });
       s.hint('Thanks. Your session feedback was sent to the agent.');
     },
-    onError: (e) => setError(e instanceof Error ? e.message : 'Could not reach Claude Manager.'),
+    onError: (e) => setError(e instanceof Error ? e.message : 'Could not reach My AI Manager.'),
   });
 
   const toggle = (value: string): void =>
@@ -97,7 +97,7 @@ function FeedbackForm({ onClose }: { onClose: () => void }) {
         <button
           type="submit"
           disabled={send.isPending}
-          className={`${button} bg-accent font-medium text-black hover:opacity-90`}
+          className={`${button} bg-accent font-medium text-accent-fg! hover:opacity-90`}
         >
           Send feedback
         </button>

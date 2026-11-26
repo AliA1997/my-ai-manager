@@ -43,7 +43,8 @@
     "format:check": "prettier --check .",
     "format": "prettier --write .",
     "build:app": "node scripts/build-app.js",
-    "prepack": "npm run build:app"
+    "prepack": "npm run build:app",
+    "test:ux": "node scripts/ux-check.js"
   },
   "dependencies": {
     "@pinecone-database/pinecone": "9.2.0",
@@ -57,7 +58,9 @@
     "ws": "^8.22.0"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.14.1",
     "@eslint/js": "10.0.1",
+    "@playwright/test": "^1.65.1",
     "@tailwindcss/cli": "4.3.5",
     "@types/node": "26.6.6",
     "@types/react": "19.3.0",
