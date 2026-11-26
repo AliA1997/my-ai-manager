@@ -73,7 +73,7 @@ const ErrorsPanel = memo(function ErrorsPanel() {
   );
 });
 
-/** The plans of the first few projects see-plan knows, each opening its review. */
+/** The plans of the first few projects see knows, each opening its review. */
 const PlansPanel = memo(function PlansPanel() {
   const { data: projects, isError } = useQuery(projectsQuery());
   const shown = projects?.projects.slice(0, OVERVIEW_PROJECTS) ?? [];
@@ -84,7 +84,7 @@ const PlansPanel = memo(function PlansPanel() {
   return (
     <Panel id="overview-plans" title="Plans" link={<PageLink to="/errors">By project</PageLink>}>
       {isError ? empty('Could not load the projects.') : null}
-      {projects && rows.length === 0 ? empty('No plans yet. Run see-plan <file> in a project.') : null}
+      {projects && rows.length === 0 ? empty('No plans yet. Run see <file> in a project.') : null}
       <ul className="flex flex-col gap-2">
         {rows.map(({ project, plan }) => (
           <li key={`${project}:${plan.name}`} className="text-sm">

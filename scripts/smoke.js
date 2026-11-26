@@ -14,7 +14,7 @@ const EXAMPLE = path.join(ROOT, "examples", "plan.html");
 const binIndex = process.argv.indexOf("--bin");
 let EXE = binIndex >= 0 ? path.resolve(process.argv[binIndex + 1]) : null;
 if (EXE && process.platform === "win32" && !EXE.endsWith(".exe") && fs.existsSync(`${EXE}.exe`)) EXE += ".exe";
-const ASSETS = ["sdk.js", "logs-client.js", "logs.css", "home-client.js", "home.css", "errors-client.js", "errors.css", "output-render.js", "vendor/mermaid.min.js"];
+const ASSETS = ["sdk.js", "output-render.js", "vendor/mermaid.min.js"];
 
 function freePort() {
   return new Promise((resolve, reject) => {
@@ -93,7 +93,7 @@ async function main(env, workDir) {
     assert((await res.text()).length > 0, `GET ${p} is empty`);
   }
 
-  // T4: `see-plan url <file>` prints a one-time sign-in link; the browser trades it for an HttpOnly cookie.
+  // T4: `see url <file>` prints a one-time sign-in link; the browser trades it for an HttpOnly cookie.
   const signIn = JSON.parse(await cli(["url", file, "--json"], env));
   const link = new URL(signIn.url);
   assert(link.pathname === "/auth" && link.searchParams.get("next") === url.pathname, `sign-in link: ${signIn.url}`);
@@ -180,7 +180,7 @@ async function errorTabs(baseUrl, workDir, stateDir) {
     for (const [i, severity] of SEVERITIES.entries()) {
       const entry = { claude_session_id: claude, uuid: `${label}-${i}`, part: 0, role: "assistant", kind: "text", at: null, text: `${label} ${severity}`, severity, reason: REASON_TEXT };
       const logged = await post("/api/claude-errors", { entry }, { origin: baseUrl });
-      assert(logged.status === "logged" && logged.severity === severity, `logged ${label} ${severity}`);
+      assert(logged.status === "logged" && logged.severity === severity, `logged ${label} ${severity}: ${JSON.stringify(logged)}`);
     }
   }
   // D9/D10: workDir is a project (a .git folder) with two superpowers plans; stateDir is not a project.

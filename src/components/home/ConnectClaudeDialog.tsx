@@ -46,14 +46,14 @@ export function ConnectClaudeDialog({ dialogRef: ref }: Props) {
         Connect your Claude agent
       </h2>
       <p className="mb-5 text-muted">
-        see-plan is where you and your Claude agent give each other feedback, look over past sessions and work
-        out how to improve them. Connect Claude to get started.
+        My AI Manager is where you and your Claude agent give each other feedback, look over past sessions and
+        work out how to improve them. Connect Claude to get started.
       </p>
       <button
         type="button"
         onClick={() => start.mutate()}
         disabled={start.isPending}
-        className="mb-4 w-full rounded-md bg-accent px-4 py-3 text-base font-semibold text-black hover:opacity-90 disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+        className="mb-4 w-full rounded-md bg-accent px-4 py-3 text-base font-semibold text-accent-fg hover:opacity-90 disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
       >
         {start.isPending ? 'Starting Claude...' : 'Connect Claude'}
       </button>

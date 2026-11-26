@@ -55,7 +55,7 @@ function DecisionForm({ choice, onClose }: { choice: Choice; onClose: () => void
         setForce(true);
         setError(`${e.message || 'Notes have not reached the agent yet'}. Approve anyway?`);
       } else {
-        setError(e instanceof Error ? e.message : 'Could not reach see-plan.');
+        setError(e instanceof Error ? e.message : 'Could not reach My AI Manager.');
       }
     },
   });
@@ -101,7 +101,7 @@ function DecisionForm({ choice, onClose }: { choice: Choice; onClose: () => void
         <button
           type="submit"
           disabled={decide.isPending}
-          className={`${button} bg-accent font-medium text-black hover:opacity-90`}
+          className={`${button} bg-accent font-medium text-accent-fg! hover:opacity-90`}
         >
           {approve ? (unsent || force ? 'Approve anyway' : label) : 'Send request'}
         </button>

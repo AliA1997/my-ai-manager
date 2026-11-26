@@ -19,22 +19,24 @@ export function appBuilt() {
  * The page content is rendered by React in the browser, from the loaders in src/routes.
  * @param {{ baseUrl?: string, title?: string, errorLogFile?: string }} [options]
  */
-export function createAppHtml({ baseUrl, title = "see-plan", errorLogFile } = {}) {
+export function createAppHtml({ baseUrl, title = "My AI Manager", errorLogFile } = {}) {
   return `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${escapeHtml(title)}</title>
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="/icon.png">
 <link rel="stylesheet" href="/app/app.css">
 <script type="module" src="/app/main.js"></script>
 </head>
 <body data-base-url="${escapeHtml(baseUrl ?? "")}" data-error-log="${escapeHtml(errorLogFile ?? "")}">
 <div id="root"></div>
-<noscript><p>see-plan needs JavaScript for this page.</p></noscript>
+<noscript><p>My AI Manager needs JavaScript for this page.</p></noscript>
 </body>
 </html>
 `;
 }
 
-export const APP_BUILD_HINT = "The see-plan pages are not built yet. Run `npm run build:app` in the see-plan folder, then reload.";
+export const APP_BUILD_HINT = "The My AI Manager pages are not built yet. Run `npm run build:app` in the see-plan folder, then reload.";

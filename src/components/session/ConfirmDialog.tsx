@@ -43,7 +43,7 @@ export function ConfirmDialog({
             close();
             onOk();
           }}
-          className={`${button} bg-danger font-medium text-black hover:opacity-90`}
+          className={`${button} bg-danger font-medium text-danger-fg! hover:opacity-90`}
         >
           {okLabel}
         </button>

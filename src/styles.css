@@ -1,16 +1,29 @@
 @import 'tailwindcss';
 
-/* Design tokens, copied from the pages this replaces (errors.css). Dark mode swaps the variables, not the classes. */
+/* Design tokens from the Lavish Axi design system (design canvas: project/ds/lavish-axi/tokens.json). Dark mode swaps the variables, not the classes. */
 :root {
   color-scheme: light dark;
-  --page: #f6f3ee;
-  --surface: #fffdf9;
-  --fg: #2b2620;
-  --muted: #6b6155; /* 4.5:1 on --page (A11Y-6) */
-  --line: #e2d9cb;
-  --accent: #c8963e;
-  --link: #8a5a12;
-  --danger: #b3261e;
+  --page: #faf7fb;
+  --surface: #ffffff;
+  --fg: #1e1626;
+  --muted: #5e5468; /* 4.5:1 on --page (A11Y-6) */
+  --line: #e4dceb;
+  --accent: #9b2c7a;
+  --accent-fg: #ffffff; /* 6.9:1 on --accent */
+  --link: #8a1f6b;
+  --danger: #b4232f;
+  --danger-fg: #ffffff;
+  --code-bg: #f3eef6;
+  --user-bg: #f6ecf6;
+  --grad-a: #4a1a7a; /* white text 12:1+ */
+  --grad-b: #b0174f; /* white text 6.8:1+ */
+  --grad-c: #b5500a; /* white text 5.1:1+ */
+  --log-user: #9b2c7a;
+  --log-assistant: #0f6b63;
+  --log-tool: #94550a;
+  --log-result: #17703a;
+  --log-system: #4b4fa8;
+  --log-error: #b4232f;
   --sev-low: #e8730c;
   --sev-low-fg: #000000;
   --sev-medium: #f2b600;
@@ -25,14 +38,27 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --page: #181614;
-    --surface: #1f1c19;
-    --fg: #ece6dc;
-    --muted: #a69c8e;
-    --line: #3a342d;
-    --accent: #d6a752;
-    --link: #e2b96a;
-    --danger: #f2b8b5;
+    --page: #120d17;
+    --surface: #1b1422;
+    --fg: #f1eaf5;
+    --muted: #b0a4ba;
+    --line: #382c42;
+    --accent: #f07ac8;
+    --accent-fg: #1a0f1a;
+    --link: #f59ad4;
+    --danger: #ff8f97;
+    --danger-fg: #000000;
+    --code-bg: #221a29;
+    --user-bg: #2c1a30;
+    --grad-a: #3b1366;
+    --grad-b: #8e1240;
+    --grad-c: #96420a;
+    --log-user: #f07ac8;
+    --log-assistant: #5ee0cf;
+    --log-tool: #fbbf5a;
+    --log-result: #74e3a2;
+    --log-system: #a9adff;
+    --log-error: #ff8f97;
     --sev-low: #ff9a3d;
     --sev-medium: #ffc94d;
     --sev-high: #ff5c5c;
@@ -50,8 +76,21 @@
   --color-muted: var(--muted);
   --color-line: var(--line);
   --color-accent: var(--accent);
+  --color-accent-fg: var(--accent-fg);
   --color-link: var(--link);
   --color-danger: var(--danger);
+  --color-danger-fg: var(--danger-fg);
+  --color-code-bg: var(--code-bg);
+  --color-user-bg: var(--user-bg);
+  --color-grad-a: var(--grad-a);
+  --color-grad-b: var(--grad-b);
+  --color-grad-c: var(--grad-c);
+  --color-log-user: var(--log-user);
+  --color-log-assistant: var(--log-assistant);
+  --color-log-tool: var(--log-tool);
+  --color-log-result: var(--log-result);
+  --color-log-system: var(--log-system);
+  --color-log-error: var(--log-error);
   --color-sev-low: var(--sev-low);
   --color-sev-low-fg: var(--sev-low-fg);
   --color-sev-medium: var(--sev-medium);

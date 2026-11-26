@@ -251,7 +251,7 @@ test("the four-stage workflow: gating, approve advances, verification can send b
   const planKey = created.key;
   const launched = await (await c.post(`/api/${planKey}/connect-claude`, {})).json();
   const prompt = c.launches[0].prompt;
-  assert.ok(prompt.startsWith("[see-plan · auth · Plan] "), prompt);
+  assert.ok(prompt.startsWith("[see · auth · Plan] "), prompt);
   assert.match(prompt, /auth\.requirements\.md/);
   assert.match(prompt, /--stage plan/);
   assert.match(prompt, /Do not start the next stage yourself/);
@@ -293,7 +293,7 @@ test("the four-stage workflow: gating, approve advances, verification can send b
   void interKey;
   const implKey = skipped.next_key;
   await (await c.post(`/api/${implKey}/connect-claude`, {})).json();
-  assert.ok(c.launches.at(-1).prompt.startsWith("[see-plan · auth · Implementation] "));
+  assert.ok(c.launches.at(-1).prompt.startsWith("[see · auth · Implementation] "));
   assert.match(c.launches.at(-1).prompt, /auth\.progress\.html/);
 
   // Implementation approved → verification; verification rejects → back to implementation with feedback.

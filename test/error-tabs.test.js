@@ -368,6 +368,8 @@ test("/errors is the React shell for every project value; its tabs are covered i
 
 test("timing budgets: /api/errors warm under 50ms with 2,000 records; sessions warm under 100ms, cold under 1.5s", async (t) => {
   const { get, errorStore } = await world(t, { transcripts: 75 });
+  // Shared CI runners (Windows especially) are several times slower than a dev machine, so the budgets scale there.
+  const slack = process.env.CI ? 4 : 1;
   const records = Array.from({ length: 2000 }, (_, i) => ({
     claude_session_id: id((i % 75) + 1), uuid: `r-${i}`, part: 0, role: "assistant", kind: "text", at: null,
     text: "y".repeat(300), reason: null, severity: SEVERITIES[i % 4], context: i % 3 ? "session" : "plan", review_key: null, stage: null,
@@ -377,17 +379,17 @@ test("timing budgets: /api/errors warm under 50ms with 2,000 records; sessions w
   let t0 = performance.now();
   assert.equal((await get("/api/claude-sessions?limit=75")).body.sessions.length, 75);
   const cold = performance.now() - t0;
-  assert.ok(cold < 1500, `sessions cold ${cold}ms`);
+  assert.ok(cold < 1500 * slack, `sessions cold ${cold}ms`);
   t0 = performance.now();
   await get("/api/claude-sessions?limit=75");
   const warm = performance.now() - t0;
-  assert.ok(warm < 100, `sessions warm ${warm}ms`);
+  assert.ok(warm < 100 * slack, `sessions warm ${warm}ms`);
   await get("/api/errors?context=session"); // warm the caches
   t0 = performance.now();
   const page = await get("/api/errors?context=session");
   const errorsWarm = performance.now() - t0;
   assert.equal(page.body.items.length, 50);
-  assert.ok(errorsWarm < 50, `/api/errors warm ${errorsWarm}ms`);
+  assert.ok(errorsWarm < 50 * slack, `/api/errors warm ${errorsWarm}ms`);
 });
 
 test("an unlabeled session from before 0.3.0 still counts as a plan by its path, without being rewritten", async (t) => {

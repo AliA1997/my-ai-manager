@@ -124,13 +124,13 @@ export function stageInstructions(stage, { requirements, plan, artifact }) {
   const tail = "Do not start the next stage yourself; the human starts it from the page.";
   switch (stage) {
     case "plan":
-      return `Read the requirements in ${requirements} and write the implementation plan to ${plan}, following \`see-plan playbook plan\`. ${tail}`;
+      return `Read the requirements in ${requirements} and write the implementation plan to ${plan}, following \`see playbook plan\`. ${tail}`;
     case "interrogation":
-      return `Read ${plan}. Grill it: write numbered questions, each with a recommended answer, into ${artifact} following \`see-plan playbook interrogation\`. After the user answers, update ${plan}. ${tail}`;
+      return `Read ${plan}. Grill it: write numbered questions, each with a recommended answer, into ${artifact} following \`see playbook interrogation\`. After the user answers, update ${plan}. ${tail}`;
     case "implementation":
-      return `Implement ${plan} task by task. After each task, update ${artifact} following \`see-plan playbook progress\`. ${tail}`;
+      return `Implement ${plan} task by task. After each task, update ${artifact} following \`see playbook progress\`. ${tail}`;
     case "verification":
-      return `Verify the implementation of ${plan} against ${requirements}: run the tests and check each requirement. Record each acceptance criterion with pass/fail and evidence in ${artifact} following \`see-plan playbook verification\`. Do not fix code in this stage. ${tail}`;
+      return `Verify the implementation of ${plan} against ${requirements}: run the tests and check each requirement. Record each acceptance criterion with pass/fail and evidence in ${artifact} following \`see playbook verification\`. Do not fix code in this stage. ${tail}`;
     default:
       return "";
   }

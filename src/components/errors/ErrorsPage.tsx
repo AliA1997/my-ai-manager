@@ -3,12 +3,13 @@ import { getRouteApi } from '@tanstack/react-router';
 import { Suspense, useCallback, useRef, useState, type KeyboardEvent } from 'react';
 import { findProject, resolveTab, tabsFor, TAB_CONTEXT, type TabId } from '../../lib/errors-tabs';
 import { sessionHref } from '../../lib/format';
+import { SESSION_FILTERS } from '../../lib/logs';
 import { errorsQuery, plansQuery, projectsQuery, sessionsQuery, summaryQuery } from '../../lib/queries';
 import { FILTER_VALUES, SEVERITY_TITLES } from '../../lib/severity';
 import type { ErrorItem, PlanItem, ProjectView, Severity } from '../../lib/types';
 import { action } from '../../routes/errors';
 import { DataFilter, type FilterOption } from '../shared/DataFilter';
-import { PageHeader, PageLink } from '../shared/PageHeader';
+import { PageHeader } from '../shared/PageHeader';
 import { Pager } from '../shared/Pager';
 import { SkeletonRows } from '../shared/Skeleton';
 import { StatusLine } from '../shared/StatusLine';
@@ -112,10 +113,37 @@ function PlansPanel({ project, report }: { project: ProjectView; report: Report 
   return <PlansTable items={data.items} onOpen={onOpen} busy={open.isPending} />;
 }
 
+const STAGE_OPTIONS: readonly FilterOption[] = SESSION_FILTERS;
+
 function SessionsPanel() {
-  const { data } = useSuspenseQuery(sessionsQuery());
-  if (data.sessions.length === 0) return <p className="py-6 text-muted">{EMPTY.sessions}</p>;
-  return <SessionsTable items={data.sessions} />;
+  const search = route.useSearch();
+  const navigate = route.useNavigate();
+  const { data } = useSuspenseQuery(sessionsQuery({ q: search.q, filter: search.filter }));
+  const onFilter = useCallback(
+    (next: { q: string; filter: string }) =>
+      void navigate({
+        search: (prev) => ({ ...prev, q: next.q || undefined, filter: next.filter || undefined }),
+      }),
+    [navigate],
+  );
+  const narrowed = Boolean(search.q || search.filter);
+  return (
+    <>
+      <DataFilter
+        label="Search and filter sessions"
+        selectLabel="Stage"
+        options={STAGE_OPTIONS}
+        q={search.q ?? ''}
+        filter={search.filter ?? ''}
+        onChange={onFilter}
+      />
+      {data.sessions.length === 0 ? (
+        <p className="py-6 text-muted">{narrowed ? 'No sessions match this search.' : EMPTY.sessions}</p>
+      ) : (
+        <SessionsTable items={data.sessions} />
+      )}
+    </>
+  );
 }
 
 function Scope({
@@ -141,11 +169,11 @@ function Scope({
     <div className="px-6 pt-3 text-muted">
       {unknown ? (
         <p>
-          That project isn&apos;t registered; run <code>see-plan error-logs</code> in it.
+          That project isn&apos;t registered; run <code>see error-logs</code> in it.
         </p>
       ) : null}
       <p>
-        Not in a project folder, so only recent sessions are shown. Run <code>see-plan error-logs</code> in a
+        Not in a project folder, so only recent sessions are shown. Run <code>see error-logs</code> in a
         project folder for error logs and plans.
       </p>
       {recent.length ? (
@@ -182,7 +210,10 @@ export function ErrorsPage() {
   const tabs = tabsFor(project);
   const active = resolveTab(search.tab, project);
   const summary = useQuery({ ...summaryQuery(project?.key ?? ''), enabled: Boolean(project) });
-  const sessionCount = useQuery({ ...sessionsQuery(), enabled: active === 'sessions' }).data?.sessions.length;
+  const sessionCount = useQuery({
+    ...sessionsQuery({ q: search.q, filter: search.filter }),
+    enabled: active === 'sessions',
+  }).data?.sessions.length;
 
   const [status, setStatus] = useState({ text: '', isError: false });
   const report = useCallback<Report>((text, isError) => setStatus({ text, isError }), []);
@@ -260,18 +291,10 @@ export function ErrorsPage() {
 
   return (
     <>
-      <title>{project ? `Error logs · ${project.name}` : 'Recent sessions'}</title>
-      <PageHeader
-        title={title}
-        links={
-          <>
-            <a href={claudeHref} className="text-link underline-offset-2 hover:underline">
-              Claude logs
-            </a>
-            <PageLink to="/notifications">Notifications</PageLink>
-          </>
-        }
-      />
+      <title>
+        {project ? `Error logs · ${project.name} · My AI Manager` : 'Recent sessions · My AI Manager'}
+      </title>
+      <PageHeader title={title} claudeHref={claudeHref} />
       <Scope
         project={project}
         recent={project ? [] : projectList.projects.slice(0, 5)}

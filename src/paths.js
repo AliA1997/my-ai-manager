@@ -2,19 +2,19 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-/** The folder name see-plan uses inside each platform's standard locations. */
+/** The folder name see uses inside each platform's standard locations. */
 export const APP_DIR = "see-plan";
 export const ERROR_LOG_NAME = "error-log.json";
 export const RUNTIME_FILE = "server.json";
 export const LOG_FILE = "server.log";
 
 /**
- * Every path see-plan owns, chosen once (P1-P3). Pure apart from `exists`, which only checks whether the
- * legacy folders and the new ones are there, so an upgrade keeps using old data until `see-plan migrate`.
+ * Every path see owns, chosen once (P1-P3). Pure apart from `exists`, which only checks whether the
+ * legacy folders and the new ones are there, so an upgrade keeps using old data until `see migrate`.
  *
  * Precedence per path: env override -> legacy (exists, and the new one does not) -> platform default.
  * `source` says which rule chose each path; `defaults` are the platform paths with no env or legacy rule,
- * which is where `see-plan migrate` copies to.
+ * which is where `see migrate` copies to.
  */
 export function resolvePaths({ env = process.env, platform = process.platform, home = homeOf(env, platform), exists = fs.existsSync } = {}) {
   const p = platform === "win32" ? path.win32 : path.posix;
@@ -106,7 +106,7 @@ export function readConfig(paths, { readFile = fs.readFileSync } = {}) {
   }
 }
 
-/** `see-plan paths` rows: every path with the rule that chose it. */
+/** `see paths` rows: every path with the rule that chose it. */
 export function pathRows(paths) {
   const rows = [
     ["state", paths.stateDir, paths.source.stateDir],

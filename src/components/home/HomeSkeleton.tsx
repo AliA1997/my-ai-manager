@@ -5,7 +5,7 @@ import { SkeletonRows } from '../shared/Skeleton';
 export function HomeSkeleton() {
   return (
     <>
-      <PageHeader title="see-plan" />
+      <PageHeader title="My AI Manager" />
       <main className="grid gap-6 lg:grid-cols-[2fr_1fr_1fr]">
         <SkeletonRows label="Loading features" rows={3} />
         <SkeletonRows label="Loading history" rows={4} />

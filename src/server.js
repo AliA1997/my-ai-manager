@@ -16,6 +16,7 @@ import { LocalErrorStore } from "./error-store.js";
 import { DataHub } from "../helpers/data-hub.js";
 import { pageParams } from "../helpers/pagination.js";
 import { registerDataRoutes } from "./data-routes.js";
+import { narrowSessions } from "../helpers/session-filter.js";
 import { APP_BUILD_HINT, appBuilt, createAppHtml } from "./app-shell.js";
 import { isSeverity, needsReason, SEVERITIES } from "./severity.js";
 import { serializeChat } from "./markdown.js";
@@ -160,7 +161,7 @@ export function createServer({
   claudeSessionTtlMs = 30000,
   projectHome = os.homedir(), // D9: never a project root (tests point it elsewhere)
   token = createToken(), // T2: every API call, page and WebSocket needs it (bearer or cookie); there is no off switch
-  rotateBrowserKey = null, // async () => new key: `see-plan logout` saves it so restarts agree
+  rotateBrowserKey = null, // async () => new key: `see logout` saves it so restarts agree
   browserKey = token, // the browser cookie is derived from this; the CLI passes a saved one so restarts keep browsers signed in
   allowedHosts = [], // H5: extra exact Host names (port forwarders); only ever added on top of the token check
   nonceTtlMs = 60000,
@@ -479,7 +480,7 @@ export function createServer({
     if (req.method !== "GET" && req.method !== "HEAD") return false;
     return req.path === "/health" || req.path === "/auth" || publicPaths.has(req.path) || req.path.startsWith("/artifact/");
   }
-  const AUTH_MESSAGE = "This see-plan server needs its token. A 3.x see-plan cannot talk to it: upgrade see-plan. In a browser, run `see-plan url` in a terminal to get a sign-in link.";
+  const AUTH_MESSAGE = "This see server needs its token. A 3.x see cannot talk to it: upgrade see-plan. In a browser, run `see url` in a terminal to get a sign-in link.";
 
   /**
    * The page a browser without a cookie gets. Left: the most recent session, by file name only (never the
@@ -503,7 +504,7 @@ export function createServer({
     const left = recent
       ? `<h2>Most recent session</h2><p class="file">${name}</p><p class="meta">${stage ? `${stage} stage · ` : ""}${escapeHtml(recent.status === "ended" ? (recent.ended_by === "approved" ? "approved" : "ended") : "open")}</p>
 <p class="agent ${state[0]}"><span class="dot" aria-hidden="true"></span>${state[1]}</p>`
-      : `<h2>Most recent session</h2><p class="meta">No sessions yet. Ask your agent to run <code>see-plan &lt;file&gt;</code>.</p><p class="agent off"><span class="dot" aria-hidden="true"></span>Claude is not connected</p>`;
+      : `<h2>Most recent session</h2><p class="meta">No sessions yet. Ask your agent to run <code>see &lt;file&gt;</code>.</p><p class="agent off"><span class="dot" aria-hidden="true"></span>Claude is not connected</p>`;
     return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta http-equiv="refresh" content="5"><title>Sign in to see-plan</title>
 <style>
 :root{color-scheme:light dark;--bg:#f6f3ee;--surface:#fffdf9;--text:#2b2620;--muted:#776d60;--border:#e2d9cb;--grad:linear-gradient(100deg,#7c4dff,#3b82f6 55%,#14b8a6)}
@@ -521,8 +522,8 @@ code{background:rgba(127,127,127,.15);padding:2px 6px;border-radius:4px}ol{paddi
 </style></head>
 <body><header>see-plan</header><main>
 <section aria-label="Most recent session">${left}</section>
-<section><h2>Sign in</h2><p>This browser is not signed in yet.</p><ol><li>In a terminal, run <code>see-plan url</code>.</li><li>Open the link it prints in this browser.</li></ol>
-<p class="meta">A link works once and expires after a minute. Opening a review with <code>see-plan &lt;file&gt;</code> signs you in too. You stay signed in for 30 days.</p></section>
+<section><h2>Sign in</h2><p>This browser is not signed in yet.</p><ol><li>In a terminal, run <code>see url</code>.</li><li>Open the link it prints in this browser.</li></ol>
+<p class="meta">A link works once and expires after a minute. Opening a review with <code>see &lt;file&gt;</code> signs you in too. You stay signed in for 30 days.</p></section>
 </main></body></html>`;
   }
 
@@ -584,7 +585,7 @@ code{background:rgba(127,127,127,.15);padding:2px 6px;border-radius:4px}ol{paddi
     res.redirect(303, next);
   });
 
-  // `see-plan logout` (bearer only): a new browser key, so every signed-in browser is signed out now.
+  // `see logout` (bearer only): a new browser key, so every signed-in browser is signed out now.
   app.post("/api/auth/rotate", async (req, res, next) => {
     try {
       if (!hasBearer(req)) return res.status(401).json(errorBody("AUTH_REQUIRED", "Only the see-plan CLI can sign out every browser"));
@@ -628,7 +629,7 @@ code{background:rgba(127,127,127,.15);padding:2px 6px;border-radius:4px}ol{paddi
 
   app.post("/shutdown", (req, res) => {
     res.json({ ok: true });
-    res.on("finish", () => setImmediate(() => shutdown("see-plan stop").catch(() => {})));
+    res.on("finish", () => setImmediate(() => shutdown("see stop").catch(() => {})));
   });
 
   app.post("/api/sessions", async (req, res, next) => {
@@ -661,7 +662,7 @@ code{background:rgba(127,127,127,.15);padding:2px 6px;border-radius:4px}ol{paddi
       }
       const holder = await store.findOutputOwner(source ?? real);
       if (holder && holder.file !== real) {
-        return res.status(409).json(errorBody("OUTPUT_IN_OTHER_SESSION", `${source ?? real} is already an output of another review. Run see-plan poll on it to join that review.`));
+        return res.status(409).json(errorBody("OUTPUT_IN_OTHER_SESSION", `${source ?? real} is already an output of another review. Run see poll on it to join that review.`));
       }
       let result;
       try {
@@ -696,7 +697,7 @@ code{background:rgba(127,127,127,.15);padding:2px 6px;border-radius:4px}ol{paddi
     }
   });
 
-  /** Creates or resumes the review session for a canonical .html file, as `see-plan <file>` does. */
+  /** Creates or resumes the review session for a canonical .html file, as `see <file>` does. */
   async function openReviewSession(real, { reopen = false, source_file, stage } = {}) {
     const result = await store.upsertSession(real, baseUrl, { reopen, source_file, stage });
     const { status, session } = result;
@@ -840,7 +841,7 @@ code{background:rgba(127,127,127,.15);padding:2px 6px;border-radius:4px}ol{paddi
 
   // Past errors like a piece of text (for agents: "has this gone wrong before?"). Pinecone matches by meaning;
   // the local store, and Pinecone when offline, match by shared words (src/vector-cache.js).
-  const searchOff = (res) => res.status(404).json(errorBody("FEATURE_OFF", "Error search is off. Set USE_ERROR_SEARCH=true, then run see-plan stop so the next command restarts the server."));
+  const searchOff = (res) => res.status(404).json(errorBody("FEATURE_OFF", "Error search is off. Set USE_ERROR_SEARCH=true, then run see stop so the next command restarts the server."));
 
   app.get("/api/errors/similar", async (req, res, next) => {
     try {
@@ -1070,7 +1071,7 @@ code{background:rgba(127,127,127,.15);padding:2px 6px;border-radius:4px}ol{paddi
       const items = [];
       for (const f of files) {
         const kind = kindOf(f);
-        if (!kind) return res.status(400).json(errorBody("VALIDATION_ERROR", `see-plan can't show this kind of file: ${f}`));
+        if (!kind) return res.status(400).json(errorBody("VALIDATION_ERROR", `see can't show this kind of file: ${f}`));
         let real;
         try {
           real = await canonicalFile(f);
@@ -1237,7 +1238,7 @@ code{background:rgba(127,127,127,.15);padding:2px 6px;border-radius:4px}ol{paddi
     }
   });
 
-  // The panel's stage dropdown (source "human") or `see-plan stage <file> <name>` (source "flag").
+  // The panel's stage dropdown (source "human") or `see stage <file> <name>` (source "flag").
   app.post("/api/:key/stage", async (req, res, next) => {
     try {
       const fromPage = (req.headers.origin ?? req.headers.referer) !== undefined;
@@ -1701,7 +1702,7 @@ code{background:rgba(127,127,127,.15);padding:2px 6px;border-radius:4px}ol{paddi
             })
             : buildPrompt({ file, stage: session.stage }),
           feature: wf?.name,
-          environment: environmentFor(key), // H2: where the newest see-plan command for this session ran
+          environment: environmentFor(key), // H2: where the newest see command for this session ran
           config: launcherConfig,
         });
       } catch (e) {
@@ -1788,7 +1789,7 @@ code{background:rgba(127,127,127,.15);padding:2px 6px;border-radius:4px}ol{paddi
       const summary = await errorSummary(lookup);
       data.index("sessions", sessions, (c) => ({ id: `claude_${c.id}`, text: `${c.title ?? ""} ${c.project ?? ""} ${c.cwd ?? ""}`, filter: slug(lookup.byClaude.get(c.id)?.stage ?? "none") }));
       res.json({
-        sessions: sessions.map((s) => {
+        sessions: narrowSessions(data, sessions, req.query, (s) => slug(lookup.byClaude.get(s.id)?.stage ?? "none")).map((s) => {
           const review = lookup.byClaude.get(s.id);
           const errors = summary.bySession.get(s.id);
           return {
@@ -2434,7 +2435,7 @@ code{background:rgba(127,127,127,.15);padding:2px 6px;border-radius:4px}ol{paddi
         if (ws.readyState === ws.CLOSED) return resolve();
         ws.once("close", resolve);
         try {
-          ws.close(1001, "see-plan server shutting down");
+          ws.close(1001, "see server shutting down");
         } catch {
           resolve();
         }

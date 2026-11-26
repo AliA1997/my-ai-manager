@@ -3,6 +3,7 @@ import { createRoute, lazyRouteComponent } from '@tanstack/react-router';
 import { ErrorsSkeleton } from '../components/errors/ErrorsSkeleton';
 import { sendJson } from '../lib/api';
 import { findProject, isTabId, PROJECT_KEY, resolveTab, TAB_CONTEXT, type TabId } from '../lib/errors-tabs';
+import { isSessionFilter } from '../lib/logs';
 import { isFilter } from '../lib/severity';
 import {
   errorsQuery,
@@ -22,7 +23,7 @@ export function validateErrorsSearch(raw: Record<string, unknown>): ErrorsSearch
   if (isTabId(raw.tab)) out.tab = raw.tab;
   if (typeof raw.project === 'string' && PROJECT_KEY.test(raw.project)) out.project = raw.project;
   if (typeof raw.q === 'string' && raw.q.trim() !== '') out.q = raw.q.trim().slice(0, 500);
-  if (isFilter(raw.filter)) out.filter = raw.filter;
+  if (isFilter(raw.filter) || isSessionFilter(raw.filter)) out.filter = raw.filter;
   const page = Number(raw.page);
   if (Number.isInteger(page) && page > 1) out.page = page;
   return out;
@@ -39,7 +40,9 @@ export async function loader(queryClient: QueryClient, search: ErrorsSearch): Pr
     project ? queryClient.ensureQueryData(summaryQuery(project.key)) : undefined,
     context ? queryClient.ensureQueryData(errorsQuery(context, list)) : undefined,
     tab === 'plans' && project ? queryClient.ensureQueryData(plansQuery(project.key)) : undefined,
-    tab === 'sessions' ? queryClient.ensureQueryData(sessionsQuery()) : undefined,
+    tab === 'sessions'
+      ? queryClient.ensureQueryData(sessionsQuery({ q: search.q, filter: search.filter }))
+      : undefined,
   ]);
 }
 

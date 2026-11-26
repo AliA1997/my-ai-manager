@@ -40,7 +40,7 @@ const page = {
   has_plan: true,
   revision: 2,
   decision: null,
-  poll_command: 'see-plan poll /x/plan.md --stage plan',
+  poll_command: 'see poll /x/plan.md --stage plan',
   history: [],
   workflow: null,
   artifact_base: `/artifact/${KEY}/${CAP}`,
@@ -228,7 +228,7 @@ test('snapshots: changed blocks are outlined, and notes name their own output', 
   ];
   assert.equal(
     snapshotFor(2, batch, { o1: '<p>1</p>', o2: '<p>2</p>' }, ''),
-    '<!-- see-plan output: o1 -->\n<p>1</p>',
+    '<!-- see output: o1 -->\n<p>1</p>',
   );
 });
 

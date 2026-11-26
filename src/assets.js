@@ -3,7 +3,7 @@ import path from "node:path";
 import * as nodeSea from "node:sea";
 import { fileURLToPath } from "node:url";
 
-const BASE_ASSETS = ["sdk.js", "logs-client.js", "logs.css", "home-client.js", "home.css", "errors-client.js", "errors.css", "data-filter.js", "notifications-client.js", "output-render.js", "vendor/mermaid.min.js"];
+const BASE_ASSETS = ["sdk.js", "output-render.js", "vendor/mermaid.min.js", "favicon.ico", "icon.png"];
 
 /** Written by scripts/build-app.js: every file of the React bundle (public/app/). */
 const APP_MANIFEST = "app/manifest.json";
@@ -22,7 +22,7 @@ function appAssetNames() {
 /** The browser files the server serves. In a single-executable build they are SEA assets with these names. */
 export const PUBLIC_ASSETS = [...BASE_ASSETS, ...appAssetNames()];
 
-export const CONTENT_TYPES = { ".js": "application/javascript; charset=utf-8", ".css": "text/css; charset=utf-8", ".json": "application/json; charset=utf-8" };
+export const CONTENT_TYPES = { ".js": "application/javascript; charset=utf-8", ".css": "text/css; charset=utf-8", ".json": "application/json; charset=utf-8", ".ico": "image/x-icon", ".png": "image/png" };
 
 /** True inside a Node single executable application. */
 export function isSea(sea = nodeSea) {

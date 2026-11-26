@@ -6,7 +6,7 @@ import { action } from '../../routes/notifications';
 import type { DeletionRule, NotificationItem } from '../../lib/types';
 import { formatDate } from '../../lib/format';
 import { DataFilter, type FilterOption } from '../shared/DataFilter';
-import { PageHeader, PageLink } from '../shared/PageHeader';
+import { PageHeader } from '../shared/PageHeader';
 import { Pager } from '../shared/Pager';
 import { StatusLine } from '../shared/StatusLine';
 
@@ -148,7 +148,7 @@ function SettingsForm({ rule, dir, onSaved }: { rule: DeletionRule; dir: string;
         <button
           type="submit"
           disabled={save.isPending}
-          className="self-start rounded-md bg-accent px-4 py-2 font-medium text-black hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-50"
+          className="self-start rounded-md bg-accent px-4 py-2 font-medium text-accent-fg hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-50"
         >
           Save settings
         </button>
@@ -187,15 +187,8 @@ export function NotificationsPage() {
 
   return (
     <>
-      <title>Notifications</title>
-      <PageHeader
-        title="Notifications"
-        links={
-          <>
-            <PageLink to="/errors">Error logs</PageLink>
-          </>
-        }
-      />
+      <title>Notifications · My AI Manager</title>
+      <PageHeader title="Notifications" />
       <StatusLine message={message} isError={Boolean(markRead.error)} />
       <main className="px-6 pb-12">
         <section aria-labelledby="list-title">

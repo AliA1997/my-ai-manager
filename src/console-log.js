@@ -1,5 +1,5 @@
 /**
- * The server's log (S4). In a terminal a person watches (the server window, tmux, `see-plan server` by hand)
+ * The server's log (S4). In a terminal a person watches (the server window, tmux, `see server` by hand)
  * lines are short and timestamped; otherwise (hidden mode, writing to server.log) they carry an ISO time.
  * Every line is mirrored to server.log when a mirror is given.
  *
@@ -31,12 +31,12 @@ export function createConsoleLog({ tty = false, write = (s) => process.stderr.wr
     banner({ version, url, mode, rows = [] }) {
       const how = { window: "in this window", tmux: "in this tmux window", hidden: "hidden (output goes to server.log)", foreground: "in this terminal" }[mode] ?? mode;
       const lines = [
-        `see-plan server ${version}`,
+        `see server ${version}`,
         `  ${url}`,
         `  started ${how}`,
         ...rows.map((r) => `  ${r.name.padEnd(9)} ${r.path}${r.source !== "default" ? ` (${r.source})` : ""}`),
-        "  To open a page in a browser, run `see-plan url` in a terminal.",
-        "  Close this window, press Ctrl+C, or run `see-plan stop` to stop the server.",
+        "  To open a page in a browser, run `see url` in a terminal.",
+        "  Close this window, press Ctrl+C, or run `see stop` to stop the server.",
       ];
       for (const l of lines) emit(tty ? l : `${now().toISOString()} ${l}`);
     },

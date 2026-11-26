@@ -28,6 +28,21 @@ jobs:
       - run: npm run smoke
       - run: npm run smoke:workflow
 
+  # UX rubric browser checks (docs/conventions/UX-RUBRIC.md). Uses the runner's installed Chrome; never downloads a browser.
+  ux:
+    runs-on: ubuntu-latest
+    env:
+      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build:app
+      - run: npm run test:ux
+
   # 3.7: a container has no display: no window, no browser, and Connect Claude falls back to a command to copy.
   headless:
     runs-on: ubuntu-latest
@@ -35,6 +50,7 @@ jobs:
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - run: npm ci
+      - run: npm run build:app
       - run: npm run smoke
       - name: Check the headless behaviour
         run: |

@@ -136,7 +136,7 @@ test("poll reports LISTENER_ACTIVE on 409", async (t) => {
   assert.equal(out.error.code, "LISTENER_ACTIVE");
   assert.match(out.next_step, /another poll is already listening/i);
   assert.match(out.next_step, /re-send your reply/i);
-  assert.match(out.next_step, /see-plan stop/);
+  assert.match(out.next_step, /see stop/);
 });
 
 test("diagram playbook does not tell agents to annotate via data-lavish-action", async () => {
@@ -180,13 +180,13 @@ test("poll rejects both reply flags", async (t) => {
 
 test("next_step strings name see-plan", () => {
   const out = createPollOutput({ file: "f.html", response: { status: "waiting" } });
-  assert.match(out.next_step, /`see-plan poll f\.html`/);
+  assert.match(out.next_step, /`see poll f\.html`/);
   assert.doesNotMatch(JSON.stringify(out), /my-lavish-axi/);
 });
 
-test("package bin is see-plan", async () => {
+test("package bin is see, with see-plan kept as an alias", async () => {
   const pkg = JSON.parse(await fs.promises.readFile(new URL("../package.json", import.meta.url), "utf8"));
-  assert.deepEqual(pkg.bin, { "see-plan": "bin/see-plan.js" });
+  assert.deepEqual(pkg.bin, { see: "bin/see-plan.js", "see-plan": "bin/see-plan.js" });
 });
 
 async function mdEnv(t) {
@@ -285,7 +285,7 @@ test("poll next_step for claude-log prompts no longer asks the agent to write fi
   assert.match(only.next_step, /One prompt is tagged `claude-log`/);
   assert.match(only.next_step, /already wrote them/);
   assert.match(only.next_step, /do not write that file yourself/);
-  assert.match(only.next_step, /Then poll again with `see-plan poll f\.html --agent-reply/);
+  assert.match(only.next_step, /Then poll again with `see poll f\.html --agent-reply/);
   assert.doesNotMatch(only.next_step, /Apply/);
 
   const mixed = createPollOutput({ file: "f.html", errorLogFile: log, response: { status: "feedback", prompts: [logPrompt, logPrompt, { prompt: "x", tag: "h1" }] } });
@@ -333,7 +333,7 @@ test("poll sends the agent and its Claude session with the request", async (t) =
   assert.equal("agent" in bodies[1].body, false);
 });
 
-test("logs prints the Claude log page; bare see-plan opens it only from a terminal", async (t) => {
+test("logs prints the Claude log page; bare see opens it only from a terminal", async (t) => {
   const { env } = await mdEnv(t);
   const l = fakeIo(env);
   assert.equal(await run(["logs", "--json"], l.io), 0);
@@ -342,7 +342,7 @@ test("logs prints the Claude log page; bare see-plan opens it only from a termin
   assert.equal((await fetch(logs.url)).status, 401, "a page without the sign-in cookie or token is refused (T5)");
   assert.equal((await authedFetch(env, logs.url)).status, 200);
 
-  // Bare see-plan opens the dashboard, with or without a terminal, and does not print the command list.
+  // Bare see opens the dashboard, with or without a terminal, and does not print the command list.
   const bare = fakeIo(env);
   assert.equal(await run(["--json"], bare.io), 0);
   const home = JSON.parse(bare.stdout());
@@ -386,7 +386,7 @@ test("error-logs registers a project folder; elsewhere it shows only sessions; e
   assert.match(out.next_step, /only recent sessions/);
   assert.ok((await (await authedFetch(env, out.error_logs.url)).text()).includes('<div id="root">'));
 
-  assert.ok(HOME_USAGE.includes("see-plan error-logs"));
+  assert.ok(HOME_USAGE.includes("see error-logs"));
 });
 
 test("poll defaults to 110000 ms under Claude Code; explicit --timeout-ms wins", async (t) => {
@@ -418,8 +418,8 @@ test("poll defaults to 110000 ms under Claude Code; explicit --timeout-ms wins",
 test("waiting next_step is a routine reconnect", () => {
   const out = createPollOutput({ file: "f.html", response: { status: "waiting", reconnect: true } });
   assert.equal(out.session.reconnect, true);
-  assert.ok(out.next_step.includes("`see-plan poll f.html`"));
-  assert.match(out.next_step, /run `see-plan poll f\.html` again now/i);
+  assert.ok(out.next_step.includes("`see poll f.html`"));
+  assert.match(out.next_step, /run `see poll f\.html` again now/i);
   assert.match(out.next_step, /do not reply to the user/i);
   assert.doesNotMatch(out.next_step, /--timeout-ms/);
   assert.ok(Buffer.byteLength(JSON.stringify(out)) < 300);
@@ -452,7 +452,7 @@ test("status, stage, feature, and prune commands", async (t) => {
   assert.equal((await json(["open", file])).code, 0);
   const st = await json(["status", file]);
   assert.deepEqual([st.out.session.status, st.out.session.stage, st.out.session.stage_source, st.out.session.queued_prompts], ["open", "interrogation", "path", 0]);
-  assert.match(st.out.next_step, /see-plan poll/);
+  assert.match(st.out.next_step, /see poll/);
   const set = await json(["stage", file, "verification"]);
   assert.deepEqual([set.out.session.stage, set.out.session.stage_source], ["verification", "flag"]);
   assert.equal((await json(["stage", file, "bogus"])).code, 1);
@@ -477,7 +477,7 @@ test("status, stage, feature, and prune commands", async (t) => {
 
   const help = fakeIo(env);
   await run(["--help"], help.io);
-  for (const cmd of ["status", "stage", "feature", "prune"]) assert.ok(help.stdout().includes(`see-plan ${cmd}`), cmd);
+  for (const cmd of ["status", "stage", "feature", "prune"]) assert.ok(help.stdout().includes(`see ${cmd}`), cmd);
 });
 
 /** An env whose home and platform folders are all inside `root`, so paths, legacy folders and migrate are isolated. */
@@ -515,7 +515,7 @@ async function legacyHome(t) {
   return root;
 }
 
-test("paths shows legacy sources, and bare see-plan says to migrate", async (t) => {
+test("paths shows legacy sources, and bare see says to migrate", async (t) => {
   const root = await legacyHome(t);
   const env = isolatedEnv(root);
   const a = fakeIo(env);
@@ -525,10 +525,10 @@ test("paths shows legacy sources, and bare see-plan says to migrate", async (t) 
   assert.equal(byName.state.source, "legacy");
   assert.equal(byName.state.path, path.join(root, ".my-lavish-axi"));
   assert.equal(byName.error_log.source, "legacy");
-  assert.match(out.next_step, /see-plan migrate/);
+  assert.match(out.next_step, /see migrate/);
   const h = fakeIo(env);
   assert.equal(await run(["--json"], h.io), 0);
-  assert.equal(JSON.parse(h.stdout()).legacy_paths, "run see-plan migrate");
+  assert.equal(JSON.parse(h.stdout()).legacy_paths, "run see migrate");
 });
 
 test("migrate: --dry-run writes nothing; a real run copies, checks and renames; a second run has nothing to do", async (t) => {

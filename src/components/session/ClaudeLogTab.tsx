@@ -28,7 +28,7 @@ function Picker({ onAttached }: { onAttached: () => void }) {
       s.push({ type: 'claude-session', id });
       onAttached();
     } catch (e) {
-      setMessage(e instanceof Error ? e.message : 'Could not reach see-plan.');
+      setMessage(e instanceof Error ? e.message : 'Could not reach My AI Manager.');
     }
   };
   const onSubmit = (event: FormEvent): void => {

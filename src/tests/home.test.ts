@@ -154,7 +154,7 @@ test('the dashboard renders features, both session lists and the New feature dia
   const stub = stubFetch({ 'GET /api/sessions': home });
   try {
     const html = await renderRoute('/');
-    assert.match(html, /<h1[^>]*>see-plan<\/h1>/);
+    assert.match(html, /<h1[^>]*>My AI Manager<\/h1>/);
     assert.match(html, /checkout/);
     assert.match(html, /Open (<!-- -->)?Plan(<!-- -->)? →/);
     assert.match(html, /1\. Plan/);

@@ -165,7 +165,7 @@ test("every route needs the token unless it is explicitly exempt (a new route mu
   const fill = (p) => p.replace(":key", key).replace(":project", "0123456789abcdef").replace(":id", "00000000-0000-4000-8000-000000000001").replace(":n", "0").replace(":cap", "0".repeat(32)).replace("*splat", "x");
   for (const r of routes) {
     const [method, p] = r.split(" ");
-    if (p.endsWith(".js") || p.endsWith(".css")) {
+    if (/\.(js|css|ico|png)$/.test(p)) {
       assert.equal((await raw(port, p)).status, 200, `${r} (a public file) is open`);
       continue;
     }
@@ -190,7 +190,7 @@ test("bearer and cookie both work; a wrong token of the same length is refused",
   assert.equal((await raw(port, `/api/${key}/status`, { headers: { cookie: `${COOKIE_NAME}=${cookieValueFor(createToken())}` } })).status, 401, "a cookie from another key");
   const page = await raw(port, `/session/${key}`);
   assert.equal(page.status, 401);
-  assert.match(page.text, /see-plan url/, "the 401 page says how to sign in");
+  assert.match(page.text, /see url/, "the 401 page says how to sign in");
   assert.equal((await raw(port, `/session/${key}`, { headers: { cookie } })).status, 200);
 });
 
@@ -289,7 +289,7 @@ test("the sign-in page shows the most recent session by file name only, and whet
   assert.match(page.text, /class="file">a\.html</);
   assert.ok(!page.text.includes(tmp), "the folder path is never shown");
   assert.match(page.text, /Claude is not connected/);
-  assert.match(page.text, /see-plan url/);
+  assert.match(page.text, /see url/);
 });
 
 test("a failed key save warns once without the key; a key older than 30 days is replaced", async (t) => {

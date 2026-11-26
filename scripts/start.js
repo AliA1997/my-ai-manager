@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// `npm start`: builds the React pages, links `see-plan` onto the PATH if it is not there yet, runs the server in
+// `npm start`: builds the React pages, links `see` onto the PATH if it is not there yet, runs the server in
 // THIS terminal (interactive: press q or Ctrl+C to stop it) and opens the dashboard in the browser.
 import { spawn, spawnSync } from "node:child_process";
 import http from "node:http";
@@ -13,7 +13,7 @@ const run = (args, env = process.env) => spawnSync(process.execPath, args, { cwd
 // npm is npm.cmd on Windows, which only runs through a shell. No user input reaches these fixed commands.
 const npm = (args, stdio) => spawnSync("npm", args, { cwd: ROOT, stdio, shell: process.platform === "win32" });
 
-/** True when `see-plan` runs from this folder's checkout (a global npm link points at it). */
+/** True when `see` runs from this folder's checkout (a global npm link points at it). */
 function linked() {
   const probe = spawnSync("see-plan", ["--version"], { cwd: path.parse(ROOT).root, encoding: "utf8", shell: process.platform === "win32" });
   return probe.status === 0;
@@ -34,12 +34,12 @@ const up = () =>
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-/** The see-plan server process holding the port, when `see-plan stop` could not reach it (another state folder). */
+/** The see-plan server process holding the port, when `see stop` could not reach it (another state folder). */
 function seePlanPidOnPort() {
   const cmd =
     process.platform === "win32"
       ? ["powershell", ["-NoProfile", "-Command", `$p=(Get-NetTCPConnection -LocalPort ${PORT} -State Listen -ErrorAction SilentlyContinue).OwningProcess; if($p){(Get-CimInstance Win32_Process -Filter "ProcessId=$p") | Where-Object { $_.CommandLine -match "see-plan" } | ForEach-Object { $_.ProcessId }}`]]
-      : ["sh", ["-c", `pid=$(lsof -ti tcp:${PORT} -sTCP:LISTEN | head -n1); [ -n "$pid" ] && ps -o args= -p "$pid" | grep -q see-plan && echo "$pid"`]];
+      : ["sh", ["-c", `pid=$(lsof -ti tcp:${PORT} -sTCP:LISTEN | head -n1); [ -n "$pid" ] && ps -o args= -p "$pid" | grep -q see && echo "$pid"`]];
   const out = spawnSync(cmd[0], cmd[1], { encoding: "utf8" }).stdout?.trim();
   return /^\d+$/.test(out ?? "") ? Number(out) : null;
 }
@@ -55,10 +55,10 @@ console.log("Building the pages...");
 if (run([path.join("scripts", "build-app.js")]) !== 0) process.exit(1);
 
 if (!linked()) {
-  console.log("Linking `see-plan` onto your PATH (npm link)...");
+  console.log("Linking `see` onto your PATH (npm link)...");
   const link = npm(["link"], "inherit");
-  if (link.status === 0 && linked()) console.log("`see-plan` is linked: you can now run it from any folder.");
-  else console.log("Could not link `see-plan` (npm link needs permission to write npm's global folder). Continuing without it; use `npm start` or `node bin/see-plan.js`.");
+  if (link.status === 0 && linked()) console.log("`see` is linked: you can now run it from any folder.");
+  else console.log("Could not link `see` (npm link needs permission to write npm's global folder). Continuing without it; use `npm start` or `node bin/see-plan.js`.");
 }
 
 // A server left running in the background cannot be controlled from this terminal: stop it, then own the next one.
@@ -67,7 +67,7 @@ if (await up()) {
   run([BIN, "stop"]);
   for (let i = 0; i < 30 && (await up()); i++) await sleep(100);
   if (await up()) {
-    // stop could not reach it (it was started with another state folder): end that see-plan process.
+    // stop could not reach it (it was started with another state folder): end that see process.
     const pid = seePlanPidOnPort();
     if (pid) kill(pid);
     for (let i = 0; i < 30 && (await up()); i++) await sleep(100);

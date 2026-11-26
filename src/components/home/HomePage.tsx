@@ -4,7 +4,7 @@ import { defaultDir, sortWorkflows, splitSessions } from '../../lib/home';
 import { useHomePush } from '../../lib/home-socket';
 import { homeQuery } from '../../lib/queries';
 import { action } from '../../routes/home';
-import { linkClass, PageHeader, PageLink } from '../shared/PageHeader';
+import { PageHeader } from '../shared/PageHeader';
 import { StatusLine } from '../shared/StatusLine';
 import { AgentStrip } from './AgentStrip';
 import { ConnectClaudeDialog } from './ConnectClaudeDialog';
@@ -55,19 +55,15 @@ export function HomePage() {
 
   return (
     <>
-      <title>see-plan</title>
+      <title>My AI Manager</title>
       <PageHeader
-        title="see-plan"
+        title="My AI Manager"
         links={
           <>
-            <a href="/claude" className={linkClass}>
-              Claude logs
-            </a>
-            <PageLink to="/errors">Error logs</PageLink>
             <button
               type="button"
               onClick={onOpen}
-              className="rounded-md bg-accent px-3 py-1 font-medium text-black hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+              className="rounded-md bg-accent px-3 py-1 font-medium text-accent-fg hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
             >
               + New feature
             </button>
@@ -117,7 +113,7 @@ export function HomePage() {
           </h2>
           <p className="text-muted">Everything open now, including each feature&apos;s stages.</p>
           {live.length === 0 ? (
-            <p className="text-muted">Nothing open. Ask your agent to run see-plan &lt;file&gt;.</p>
+            <p className="text-muted">Nothing open. Ask your agent to run see &lt;file&gt;.</p>
           ) : null}
           {live.map((s) => (
             <SessionCard

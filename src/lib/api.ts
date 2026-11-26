@@ -1,4 +1,4 @@
-/** One place for talking to the local see-plan server (DRY, FE-13). Same-origin, cookie auth. */
+/** One place for talking to the local see server (DRY, FE-13). Same-origin, cookie auth. */
 
 /** A failed request: the server's message, plus its error code and HTTP status for the pages that branch on them. */
 export class ApiError extends Error {

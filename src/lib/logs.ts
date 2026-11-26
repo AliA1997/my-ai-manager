@@ -3,6 +3,18 @@ import type { LogBody, LogEntry, LogState, SessionItem, Severity } from './types
 
 /** Pure helpers for the Claude log page: merging polled entries, entry references and the chosen session. */
 
+/** The stage filter of the session lists. "none" is a session that is not part of a feature. */
+export const SESSION_FILTERS = [
+  { value: 'plan', label: 'Plan' },
+  { value: 'interrogation', label: 'Interrogation' },
+  { value: 'implementation', label: 'Implementation' },
+  { value: 'verification', label: 'Verification' },
+  { value: 'none', label: 'No stage' },
+] as const;
+
+export const isSessionFilter = (value: unknown): value is string =>
+  typeof value === 'string' && SESSION_FILTERS.some((o) => o.value === value);
+
 export const MAX_ENTRIES = 1000;
 export const PREVIEW_CHARS = 300;
 export const MAX_REASON = 2000;

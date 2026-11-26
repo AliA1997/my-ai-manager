@@ -10,18 +10,22 @@ import {
   projectLabel,
   refOf,
   resolveSessionId,
+  SESSION_FILTERS,
   statusMessage,
   withLogged,
 } from '../../lib/logs';
 import { logKey, logQuery, sessionsQuery } from '../../lib/queries';
 import type { LogRow, LogState, SessionItem, Severity } from '../../lib/types';
 import { action } from '../../routes/logs';
+import { DataFilter, type FilterOption } from '../shared/DataFilter';
 import { PageHeader } from '../shared/PageHeader';
 import { StatusLine } from '../shared/StatusLine';
 import { EntryRow } from './EntryRow';
 import { LogEntryDialog } from './LogEntryDialog';
 
 const route = getRouteApi('/claude');
+
+const STAGE_OPTIONS: readonly FilterOption[] = SESSION_FILTERS;
 
 const optionLabel = (s: SessionItem): string =>
   [clip(s.title ?? '(no prompt)', 70), projectLabel(s), s.modified_at ? timeAgo(s.modified_at) : '']
@@ -88,7 +92,7 @@ function Transcript({ id, sessions }: { id: string; sessions: SessionItem[] }) {
 
   return (
     <>
-      <title>{`Claude log · ${id.slice(0, 8)}`}</title>
+      <title>{`Claude log · ${id.slice(0, 8)} · My AI Manager`}</title>
       <header className="flex flex-wrap items-end justify-between gap-4 px-6 pt-4">
         <div>
           <p className="text-xs font-medium tracking-wide text-muted uppercase">Claude session</p>
@@ -110,7 +114,7 @@ function Transcript({ id, sessions }: { id: string; sessions: SessionItem[] }) {
             id="session-select"
             value={id}
             onChange={onPick}
-            className="max-w-md rounded-md border border-line bg-surface px-2 py-1 text-fg focus-visible:outline-2 focus-visible:outline-accent"
+            className="w-full min-w-0 max-w-md rounded-md border border-line bg-surface px-2 py-1 text-fg focus-visible:outline-2 focus-visible:outline-accent"
           >
             {list.map((s) => (
               <option key={s.id} value={s.id}>
@@ -122,7 +126,7 @@ function Transcript({ id, sessions }: { id: string; sessions: SessionItem[] }) {
       </header>
       <p className="px-6 pt-3 text-sm text-muted">
         Click an entry to log it as an error in <code>{errorLog}</code>. You can say why before it is saved.{' '}
-        <code>see-plan paths</code> shows where see-plan keeps its files.
+        <code>see paths</code> shows where see keeps its files.
       </p>
       <StatusLine message={status} isError={log.isError} />
       <main className="px-6 pb-12" aria-label="Transcript">
@@ -162,29 +166,48 @@ function Transcript({ id, sessions }: { id: string; sessions: SessionItem[] }) {
 /** The /claude page: one Claude session's transcript, newest at the bottom; a click logs an entry as an error. */
 export function LogsPage() {
   const search = route.useSearch();
-  const { data } = useSuspenseQuery(sessionsQuery());
+  const navigate = route.useNavigate();
+  const { data } = useSuspenseQuery(sessionsQuery({ q: search.q, filter: search.filter }));
   const id = resolveSessionId(search.id, data.sessions);
   const errorsLink = search.project ? `/errors?project=${encodeURIComponent(search.project)}` : '/errors';
+  const onFilter = useCallback(
+    (next: { q: string; filter: string }) =>
+      void navigate({
+        search: (prev) => ({
+          ...prev,
+          id: undefined,
+          q: next.q || undefined,
+          filter: next.filter || undefined,
+        }),
+      }),
+    [navigate],
+  );
 
   return (
     <>
-      <PageHeader
-        title="Claude session logs"
-        links={
-          <a
-            href={errorsLink}
-            className="text-link underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-accent"
-          >
-            Error logs
-          </a>
-        }
-      />
+      <PageHeader title="Claude session logs" errorsHref={errorsLink} />
+      <div className="px-6">
+        <DataFilter
+          label="Search and filter Claude sessions"
+          selectLabel="Stage"
+          options={STAGE_OPTIONS}
+          q={search.q ?? ''}
+          filter={search.filter ?? ''}
+          onChange={onFilter}
+        />
+      </div>
       {id ? (
         <Transcript key={id} id={id} sessions={data.sessions} />
       ) : (
         <>
-          <title>Claude session logs</title>
-          <StatusLine message="No Claude sessions found in ~/.claude/projects." />
+          <title>Claude session logs · My AI Manager</title>
+          <StatusLine
+            message={
+              search.q || search.filter
+                ? 'No Claude sessions match this search.'
+                : 'No Claude sessions found in ~/.claude/projects.'
+            }
+          />
         </>
       )}
     </>

@@ -46,10 +46,10 @@ export function isClaudeSessionId(id) {
 
 const STAGE_TITLES = { plan: "Plan", interrogation: "Interrogation", implementation: "Implementation", verification: "Verification" };
 
-/** `[see-plan · <feature> · <Stage>]`: Claude titles sessions by their first prompt, so the label shows in session lists. */
+/** `[see · <feature> · <Stage>]`: Claude titles sessions by their first prompt, so the label shows in session lists. */
 export function launchLabel({ file, feature, stage }) {
   const name = feature || String(file).split(/[\\/]/).pop().replace(/\.(plan\.)?(md|markdown|html?)$/i, "");
-  return `[see-plan · ${name} · ${STAGE_TITLES[stage] ?? "Review"}]`;
+  return `[see · ${name} · ${STAGE_TITLES[stage] ?? "Review"}]`;
 }
 
 export function buildPrompt({ file, feature, stage, instructions }) {
@@ -57,9 +57,9 @@ export function buildPrompt({ file, feature, stage, instructions }) {
   return (
     `${launchLabel({ file, feature, stage })} This is a see-plan ${stage ? `${STAGE_TITLES[stage] ?? stage} stage` : "review session"} for the file ${file}. ` +
     (instructions ? `${instructions} ` : "") +
-    `Run see-plan poll on that file${stage ? ` with --stage ${stage}` : ""} (quote the path for your shell) and follow its next_step. ` +
+    `Run see poll on that file${stage ? ` with --stage ${stage}` : ""} (quote the path for your shell) and follow its next_step. ` +
     "The poll returns about every 1:50 with reconnect: true; run it again right away, without replying to the user. " +
-    "If a permission prompt asks about see-plan, the user can allow Bash(see-plan:*) once."
+    "If a permission prompt asks about see-plan, the user can allow Bash(see:*) once."
   );
 }
 
@@ -231,7 +231,7 @@ export function tmuxName(name) {
 
 /**
  * `tmux new-window -d -n <name> -c <cwd> -- <argv...>` (argv only, never a shell string). Without a tmux
- * session to target, a detached `new-session -s see-plan` instead. `socket` is the CLI's tmux server (H2).
+ * session to target, a detached `new-session -s see` instead. `socket` is the CLI's tmux server (H2).
  */
 export function buildTmuxLaunch({ argv, name, cwd, socket = null, inTmux = true }) {
   const target = socket && TMUX_SOCKET.test(socket) ? ["-S", socket] : [];

@@ -34,10 +34,12 @@ try {
   $unpacked = Join-Path $tmp "unpacked"
   Expand-Archive -Path (Join-Path $tmp $asset) -DestinationPath $unpacked -Force
   New-Item -ItemType Directory -Force -Path $installDir | Out-Null
-  Get-Process -Name "see-plan" -ErrorAction SilentlyContinue | Where-Object { $_.Path -like "$installDir*" } | Stop-Process -Force
+  Get-Process -Name "see-plan", "see" -ErrorAction SilentlyContinue | Where-Object { $_.Path -like "$installDir*" } | Stop-Process -Force
   foreach ($f in @("see-plan.exe", "LICENSE", "NOTICE", "THIRD_PARTY_LICENSES.txt", "README.md")) {
     Copy-Item -Force (Join-Path $unpacked $f) $installDir
   }
+  # `see` is the main command; `see-plan` stays as an alias.
+  Copy-Item -Force (Join-Path $installDir "see-plan.exe") (Join-Path $installDir "see.exe")
 
   $userPath = [Environment]::GetEnvironmentVariable("Path", "User")
   $parts = @($userPath -split ";" | Where-Object { $_ })
@@ -56,8 +58,8 @@ try {
     Write-Host "Skill not installed. Re-run with -InstallSkill (or SEE_PLAN_INSTALL_SKILL=1) to add it to ~/.claude/skills."
   }
 
-  $v = & (Join-Path $installDir "see-plan.exe") --version
-  Write-Host "see-plan $v installed to $installDir."
+  $v = & (Join-Path $installDir "see.exe") --version
+  Write-Host "see $v installed to $installDir (see-plan still works)."
 } finally {
   Remove-Item -Recurse -Force $tmp -ErrorAction SilentlyContinue
 }

@@ -133,16 +133,6 @@ export const Composer = memo(function Composer() {
               >
                 End session
               </button>
-              <form method="post" action="/api/auth/signout" target="_top">
-                <button
-                  type="submit"
-                  role="menuitem"
-                  title="Sign out this browser and disconnect the agent"
-                  className={menuItem}
-                >
-                  Sign out
-                </button>
-              </form>
             </span>
           ) : null}
         </span>
@@ -150,7 +140,7 @@ export const Composer = memo(function Composer() {
           type="button"
           disabled={locked}
           onClick={() => submit(false)}
-          className="ml-auto rounded-md bg-accent px-3 py-1 font-medium text-black hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-50"
+          className="ml-auto rounded-md bg-accent px-3 py-1 font-medium text-accent-fg hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-50"
         >
           Send to Agent
         </button>

@@ -3,6 +3,7 @@ import { getRouteApi } from '@tanstack/react-router';
 import { memo, useRef, useState, type KeyboardEvent } from 'react';
 import { basename } from '../../lib/format';
 import { sessionPageQuery } from '../../lib/queries';
+import { PageHeader } from '../shared/PageHeader';
 import { ArtifactFrame } from './ArtifactFrame';
 import { ChatPanel, QueuedNotes } from './ChatPanel';
 import { ClaudeLogTab } from './ClaudeLogTab';
@@ -124,24 +125,27 @@ function Review({ baseUrl }: { baseUrl: string }) {
   return (
     <SessionContext value={s}>
       <h1 className="sr-only">Review of {basename(page.file) || 'the artifact'}</h1>
-      <div className="flex h-screen bg-page">
-        <ArtifactFrame />
-        <aside
-          aria-label="Review panel"
-          className="flex w-96 max-w-[45vw] min-w-72 flex-col border-l border-line bg-page"
-        >
-          <PanelHeader />
-          <ConnectionCard onViewLog={() => s.selectTab('log')} onFeedback={openFeedback} copy={copy} />
-          <WorkflowBar />
-          <NextStageNotice />
-          <EndedBanner />
-          <QueuedNotes />
-          <Tabs />
-          <ChatPanel />
-          <ClaudeLogTab />
-          <DecisionBar />
-          <Composer />
-        </aside>
+      <div className="flex flex-col h-screen bg-page">
+        <PageHeader title={`Review of ${basename(page.file) || 'the artifact'}`} showTitle={false} />
+        <div className="flex flex-1 min-h-0">
+          <ArtifactFrame />
+          <aside
+            aria-label="Review panel"
+            className="flex w-96 max-w-[45vw] min-w-72 flex-col border-l border-line bg-page"
+          >
+            <PanelHeader />
+            <ConnectionCard onViewLog={() => s.selectTab('log')} onFeedback={openFeedback} copy={copy} />
+            <WorkflowBar />
+            <NextStageNotice />
+            <EndedBanner />
+            <QueuedNotes />
+            <Tabs />
+            <ChatPanel />
+            <ClaudeLogTab />
+            <DecisionBar />
+            <Composer />
+          </aside>
+        </div>
       </div>
       <FeedbackDialog dialogRef={feedbackRef} opened={feedbackOpened} />
     </SessionContext>

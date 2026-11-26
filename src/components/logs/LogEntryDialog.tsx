@@ -123,7 +123,7 @@ function EntryForm({
           <button
             type="submit"
             disabled={!canSave}
-            className={`${button} bg-accent font-medium text-black hover:opacity-90 disabled:opacity-50`}
+            className={`${button} bg-accent font-medium text-accent-fg! hover:opacity-90 disabled:opacity-50`}
           >
             Log as error
           </button>

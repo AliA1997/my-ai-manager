@@ -21,7 +21,7 @@ const KINDS = [
 
 const IMAGE_TYPES = { ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".gif": "image/gif", ".webp": "image/webp", ".svg": "image/svg+xml" };
 
-/** The output kind for a file name, or null when see-plan cannot show it. */
+/** The output kind for a file name, or null when see cannot show it. */
 export function kindOf(file) {
   const name = String(file);
   return KINDS.find(([, re]) => re.test(name))?.[0] ?? null;

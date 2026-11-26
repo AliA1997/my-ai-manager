@@ -96,7 +96,7 @@ function FeatureForm({ initialDir, error, saving, onCancel, onCreate }: Omit<Pro
         <button
           type="submit"
           disabled={saving}
-          className="rounded-md bg-accent px-3 py-1 font-medium text-black hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-50"
+          className="rounded-md bg-accent px-3 py-1 font-medium text-accent-fg hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-50"
         >
           Create feature
         </button>
