@@ -37,7 +37,7 @@ function trySpawn(spawnFn, command, args) {
 }
 
 /**
- * Opens a local see-plan page in the default browser (H4). Never throws: resolves to { opened: true } or
+ * Opens a local see page in the default browser (H4). Never throws: resolves to { opened: true } or
  * { opened: false, reason }. Refuses anything but http://127.0.0.1 or http://localhost.
  */
 export async function openUrl(url, { platform = process.platform, spawnFn = spawn, wsl = false } = {}) {

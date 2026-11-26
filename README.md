@@ -1,6 +1,6 @@
 # My AI Manager (my-lavish-axi)
 
-My AI Manager is a CLI built for AI agents (the command is still `see-plan`). The agent writes an HTML artifact (a plan, diagram, table, report) and runs `see-plan <file.html>`. A local browser page opens; the human clicks elements or selects text to leave notes, chats, and presses **Send to Agent**. Meanwhile the agent waits in `see-plan poll <file.html>`, which returns the feedback as structured data.
+My AI Manager is a CLI built for AI agents (the command is still `see`). The agent writes an HTML artifact (a plan, diagram, table, report) and runs `see <file.html>`. A local browser page opens; the human clicks elements or selects text to leave notes, chats, and presses **Send to Agent**. Meanwhile the agent waits in `see poll <file.html>`, which returns the feedback as structured data.
 
 This is a small re-implementation of the core loop of [lavish-axi](https://github.com/kunchenguid/lavish-axi).
 
@@ -28,9 +28,9 @@ irm https://github.com/AliA1997/my-lavish/releases/latest/download/install.ps1 |
 curl -fsSL https://github.com/AliA1997/my-lavish/releases/latest/download/install.sh | sh
 ```
 
-To also install the Claude Code skill (`~/.claude/skills/my-lavish`): set `$env:SEE_PLAN_INSTALL_SKILL = "1"` before the PowerShell line, or append `-s -- --install-skill` to `sh`. Open a new terminal, then run `see-plan --version`.
+To also install the Claude Code skill (`~/.claude/skills/my-lavish`): set `$env:SEE_PLAN_INSTALL_SKILL = "1"` before the PowerShell line, or append `-s -- --install-skill` to `sh`. Open a new terminal, then run `see --version`.
 
-**2. Manual download** — grab `see-plan-<platform>.zip|tar.gz` from [Releases](https://github.com/AliA1997/my-lavish/releases), check it against `SHA256SUMS`, and put `see-plan` on your PATH. Builds: Windows x64, Linux x64, macOS arm64, macOS x64.
+**2. Manual download** — grab `see-plan-<platform>.zip|tar.gz` from [Releases](https://github.com/AliA1997/my-lavish/releases), check it against `SHA256SUMS`, and put `see` on your PATH. Builds: Windows x64, Linux x64, macOS arm64, macOS x64.
 
 > **Windows SmartScreen:** the executable is not code-signed yet, so Windows may warn "Windows protected your PC" the first time. Choose **More info → Run anyway**, or install with npm instead. macOS builds are ad-hoc signed; if Gatekeeper blocks one, run `xattr -d com.apple.quarantine ~/.see-plan/bin/see-plan`.
 
@@ -41,7 +41,7 @@ To also install the Claude Code skill (`~/.claude/skills/my-lavish`): set `$env:
 ```
 npm install
 npm run build:app   # builds the React pages into public/app (needed once, and after changing src/)
-npm link            # puts `see-plan` on your PATH; or run `node bin/see-plan.js <args>`
+npm link            # puts `see` on your PATH; or run `node bin/see-plan.js <args>`
 ```
 
 The pages (dashboard, review, Claude logs, errors, notifications) are a React app. Until `npm run build:app` has run, the server answers `503` with that hint. `npm test` and `npm pack` run the build for you.
@@ -50,7 +50,7 @@ Upgrading from 0.1: the command was renamed, so run `npm unlink -g my-lavish-axi
 
 A browser is needed only for the human side; use `--no-open` to skip launching it.
 
-**WSL (Ubuntu on Windows):** install with the `sh` one-liner *inside* WSL and keep your projects in the WSL home (`~/projects`), not under `/mnt/c`: file watching and live reload are unreliable there. The page opens in your Windows browser (`wslview`, then `explorer.exe`); if neither works, see-plan prints a link to paste. **Connect Claude** opens Windows Terminal (`wt.exe`) in your distro, else tmux, else shows a command to copy.
+**WSL (Ubuntu on Windows):** install with the `sh` one-liner *inside* WSL and keep your projects in the WSL home (`~/projects`), not under `/mnt/c`: file watching and live reload are unreliable there. The page opens in your Windows browser (`wslview`, then `explorer.exe`); if neither works, see prints a link to paste. **Connect Claude** opens Windows Terminal (`wt.exe`) in your distro, else tmux, else shows a command to copy.
 
 ### Quick start
 
@@ -61,7 +61,7 @@ npm install
 npm start          # builds the pages, runs npm link if needed, opens the dashboard and keeps the server running here; press q or Ctrl+C to stop it
 ```
 
-After that (`npm start` runs `npm link` for you when `see-plan` is not on your PATH yet), `see-plan` with no arguments does the same from any terminal. The dashboard's **Help** link lists every command. Agents open a plan with `see-plan <file>`; you do not need to.
+After that (`npm start` runs `npm link` for you when `see` is not on your PATH yet), `see` with no arguments does the same from any terminal. The dashboard's **Help** link lists every command. Agents open a plan with `see <file>`; you do not need to.
 
 To open a plan yourself, and to run the tests:
 
@@ -69,17 +69,17 @@ To open a plan yourself, and to run the tests:
 npm install
 npm run build:app                          # once: builds the React pages
 npm test                                   # optional: unit tests
-node bin/see-plan.js examples/plan.html    # opens the review page (or `see-plan ...` after npm link)
+node bin/see-plan.js examples/plan.html    # opens the review page (or `see ...` after npm link)
 node bin/see-plan.js poll examples/plan.html   # in a second terminal: waits for your feedback
 node bin/see-plan.js stop                  # when done
 ```
 
-`see-plan` with no arguments opens the dashboard and no longer prints the command list: that is on the dashboard's **Help** page (`/help`), and `see-plan --help` prints it in the terminal. To see one Claude session's log, run `see-plan logs` from anywhere. The browser opens the **Claude log page** at `http://127.0.0.1:4388/claude`. No plan is shown. The top line is the newest Claude Code session's id and the date of its last prompt, and the page below is that session's log, updating live. **Recent sessions** switches to any of your 20 latest sessions. Click an entry to log it as an error: a dialog shows the entry, asks you to pick a **severity** and *Why is this an error?*, and **Log as error** adds it to the error log (`see-plan paths` shows where). `see-plan error-logs` lists everything logged (see [Error logs](#error-logs)).
+`see` with no arguments opens the dashboard and no longer prints the command list: that is on the dashboard's **Help** page (`/help`), and `see --help` prints it in the terminal. To see one Claude session's log, run `see logs` from anywhere. The browser opens the **Claude log page** at `http://127.0.0.1:4388/claude`. No plan is shown. The top line is the newest Claude Code session's id and the date of its last prompt, and the page below is that session's log, updating live. **Recent sessions** switches to any of your 20 latest sessions. Click an entry to log it as an error: a dialog shows the entry, asks you to pick a **severity** and *Why is this an error?*, and **Log as error** adds it to the error log (`see paths` shows where). `see error-logs` lists everything logged (see [Error logs](#error-logs)).
 
 To attach a session from the command line instead, pass its id (the file name of a `~/.claude/projects/<project>/<id>.jsonl`):
 
 ```
-see-plan examples/plan.html --claude-session <session-uuid>
+see examples/plan.html --claude-session <session-uuid>
 ```
 
 If the session was ended earlier, add `--reopen`. Use `--no-open` to skip the browser.
@@ -87,24 +87,24 @@ If the session was ended earlier, add `--reopen`. Use `--no-open` to skip the br
 ### Try it
 
 ```
-see-plan examples/plan.html
+see examples/plan.html
 ```
 
 A browser page opens with the example plan. Then, in another terminal (or as the agent):
 
 ```
-see-plan poll examples/plan.html
+see poll examples/plan.html
 ```
 
 Click something on the page, add a note, press **Send to Agent**, and the poll returns it. Reply and wait again with:
 
 ```
-see-plan poll examples/plan.html --agent-reply "Updated step 2."
+see poll examples/plan.html --agent-reply "Updated step 2."
 ```
 
-Finish with `see-plan end examples/plan.html`, and `see-plan stop` to shut down the background server.
+Finish with `see end examples/plan.html`, and `see stop` to shut down the background server.
 
-**Working on the pages:** edit `src/`, run `npm run build:app`, then `see-plan stop` and open the page again (the server lists the built files when it starts, so a rebuild needs a restart). Before you commit, run `npm run typecheck && npm run lint && npm run format:check`.
+**Working on the pages:** edit `src/`, run `npm run build:app`, then `see stop` and open the page again (the server lists the built files when it starts, so a rebuild needs a restart). Before you commit, run `npm run typecheck && npm run lint && npm run format:check`.
 
 ### Use it from an agent
 
@@ -113,7 +113,7 @@ Copy `skills/my-lavish/` into your agent's skills folder (for Claude Code: `~/.c
 ### Run a feature through four stages
 
 ```
-see-plan feature start export-csv --requirements reqs.md --with-claude
+see feature start export-csv --requirements reqs.md --with-claude
 ```
 
 This writes `export-csv.requirements.md` and a placeholder `export-csv.plan.md`, opens the Plan stage, and starts Claude to write the plan. Each stage has its own page and its own fresh Claude session:
@@ -143,10 +143,10 @@ npm run smoke:bin       # the full loop against that executable
  agent writes HTML
         |
         v
- see-plan <file>  --->  detached local server + browser page opens
+ see <file>  --->  detached local server + browser page opens
         |                                   |
         v                                   v
- see-plan poll <file>          human annotates, chats,
+ see poll <file>          human annotates, chats,
    (blocks, silent)  <---- feedback ----  presses "Send to Agent"
         |
         v
@@ -163,8 +163,8 @@ One background server is started on demand and reused by later commands. A sessi
 
 | Command | What it does |
 | --- | --- |
-| `see-plan` | Lists known sessions and usage. Run in a terminal, it also prints the Claude log page URL and the `error_logs` URL for the current folder (it never opens a browser) |
-| `see-plan <file.html|file.md>` / `open <file>` | A `.md` plan is converted to a sibling `.html` (regenerated when the `.md` is newer, never over a hand-written `.html`); agents edit the `.md`. Opens (or reopens) the session and the browser. A session the user ended is refused unless `--reopen` is given |
+| `see` | Lists known sessions and usage. Run in a terminal, it also prints the Claude log page URL and the `error_logs` URL for the current folder (it never opens a browser) |
+| `see <file.html|file.md>` / `open <file>` | A `.md` plan is converted to a sibling `.html` (regenerated when the `.md` is newer, never over a hand-written `.html`); agents edit the `.md`. Opens (or reopens) the session and the browser. A session the user ended is refused unless `--reopen` is given |
 | `poll <file>` | Blocks until the user sends feedback or ends the session; prints prompts, `next_step`, and a DOM snapshot |
 | `poll <file> --agent-reply "<text>"` | Posts a reply to the chat, then polls |
 | `reply <file> --agent-reply "<text>"` | Posts a reply without polling |
@@ -189,8 +189,8 @@ Every output includes a `next_step` telling the agent what to do next.
 
 ## Working with Claude from the page
 
-- **Connection card** at the top of the panel shows one state at a time: *No agent connected* (with **Connect Claude**, **Resume last session** when there is an earlier Claude conversation, and *How do I connect manually?*), *Starting Claude… 0:12* (with **Cancel**), *connected — waiting for your feedback*, *working on your feedback*, *stuck* (no poll after 45 s: check the Claude window for a folder-trust, login, or permission prompt; **Copy allow-rule** copies `"Bash(see-plan:*)"` for `.claude/settings.json`), and *unsupported* (a command to paste). Hover the connected card to see the last check-in.
-- **Connect Claude** opens a terminal in the plan's repo root and starts `claude --session-id <uuid>` with a labeled prompt (`[see-plan · <feature> · <Stage>] …`). Windows uses PowerShell (needs the native `claude.exe`), macOS uses Terminal, Linux uses the first of x-terminal-emulator, gnome-terminal, konsole, xterm. If none is available, the card shows the command to paste. Paths and prompts never go through a shell string. see-plan never passes a permission-bypass flag.
+- **Connection card** at the top of the panel shows one state at a time: *No agent connected* (with **Connect Claude**, **Resume last session** when there is an earlier Claude conversation, and *How do I connect manually?*), *Starting Claude… 0:12* (with **Cancel**), *connected — waiting for your feedback*, *working on your feedback*, *stuck* (no poll after 45 s: check the Claude window for a folder-trust, login, or permission prompt; **Copy allow-rule** copies `"Bash(see:*)"` for `.claude/settings.json`), and *unsupported* (a command to paste). Hover the connected card to see the last check-in.
+- **Connect Claude** opens a terminal in the plan's repo root and starts `claude --session-id <uuid>` with a labeled prompt (`[see · <feature> · <Stage>] …`). Windows uses PowerShell (needs the native `claude.exe`), macOS uses Terminal, Linux uses the first of x-terminal-emulator, gnome-terminal, konsole, xterm. If none is available, the card shows the command to paste. Paths and prompts never go through a shell string. see never passes a permission-bypass flag.
 - **Session feedback** (on the card): 👍/👎, categories (*Wrong direction*, *Too slow*, *Broke something*, *Ignored my notes*, *Great job*) and a note. It reaches the agent on its next poll and is logged to `feedback.jsonl` in the state directory.
 - **Approve / Request changes** sit above the composer for plans and staged sessions. Approve ends the session as *approved* (and, in a feature, opens the next stage). **⋯ More** holds *Comment on the whole plan*, *Send & End* and *End session*; ending asks first. After a session ends, **Resume (keep history)** reopens it and **Start fresh** clears the chat (earlier rounds stay under *Previous rounds*).
 - **Revision rN ▾** lists the last 20 versions of the page; pick one to view it read-only. After each reload the blocks that changed are outlined for 10 s.
@@ -198,17 +198,17 @@ Every output includes a `next_step` telling the agent what to do next.
 - **Claude log** tab shows that session's transcript (`~/.claude/projects/*/<session-id>.jsonl`, or `$CLAUDE_CONFIG_DIR`). A Claude agent's poll attaches its own session when none is attached yet (it never replaces one you picked); `--claude-session <uuid>` always sets it. Each refresh reads at most 256 KB and the tab keeps the last 500 entries.
 - With no session attached, or one with no transcript (such as a Connect Claude launch that never started), the tab lists the **20 most recent Claude sessions**, newest first. Each is titled by its `/rename` title or first prompt; built-in commands such as `/clear` or `/model` are skipped. Click one to show its log, or paste an id. **Change session** reopens the list.
 - **Click a log entry** to open a small note box: **Send to agent** (a `claude-log` note with your text), **Log as error** (the server appends it to the error log with the severity you pick in the box, and your text saved as the `reason`), or **Both**. *Log as error* and *Both* need a severity; High and Send to IT also need a note. The agent is never asked to write files. A sent entry is marked. Select text inside an entry to copy it instead.
-- **Claude log page** (`/claude`, opened by `see-plan logs`): the newest Claude session's id and last-prompt date on top, its log below, and a **Recent sessions** menu for the other 19. The log loads at least 200 entries when the session has that many (reading up to 16 MB back), then updates live. Add `?id=<uuid>` to the URL to open a given session. No agent is involved here: clicking an entry opens a confirmation dialog with a preview, a required **severity** (keys 1–4 pick one) and a reason (up to 2,000 characters; required for High and Send to IT). **Log as error** (or Ctrl/Cmd+Enter) makes the server append it (session id, line `uuid`, part, role, kind, time, text, `reason`, `severity`, `context`, `review_key`, `stage`, `reported_at`) to the error log itself (`see-plan paths` shows where); Esc cancels. Clicking an entry that is already logged shows its saved reason and severity, read-only: the first ones are kept. Logged entries carry a severity badge. The page header links to the dashboard and the **Error logs** page. It creates the file if missing, keeps the records already there, skips an entry that is already logged, and refuses to touch a file that is not a JSON array.
-- **Staying signed in.** The browser cookie lasts 30 days and survives server restarts: it is derived from a separate key saved as `browser-key` in the state folder (readable only by you). Delete that file to sign every browser out. Only a browser that has never signed in, or whose cookie expired, sees the sign-in screen; `see-plan url` (or opening any review) fixes that.
-- **What the token protects.** The server makes a new secret token at each start and keeps it in a file only your user can read (`server.json` in the runtime folder; see `see-plan paths`). The CLI sends it on every call, and the browser signs in through a one-time link that sets a cookie. Run `see-plan url` to get a link. This stops other OS users on the machine, sandboxed or containerised processes that can reach `127.0.0.1` but can't read your files, and attacks from websites. It does **not** stop malware already running as you: that can read the token file, and everything else you own.
+- **Claude log page** (`/claude`, opened by `see logs`): the newest Claude session's id and last-prompt date on top, its log below, and a **Recent sessions** menu for the other 19. The log loads at least 200 entries when the session has that many (reading up to 16 MB back), then updates live. Add `?id=<uuid>` to the URL to open a given session. No agent is involved here: clicking an entry opens a confirmation dialog with a preview, a required **severity** (keys 1–4 pick one) and a reason (up to 2,000 characters; required for High and Send to IT). **Log as error** (or Ctrl/Cmd+Enter) makes the server append it (session id, line `uuid`, part, role, kind, time, text, `reason`, `severity`, `context`, `review_key`, `stage`, `reported_at`) to the error log itself (`see paths` shows where); Esc cancels. Clicking an entry that is already logged shows its saved reason and severity, read-only: the first ones are kept. Logged entries carry a severity badge. The page header links to the dashboard and the **Error logs** page. It creates the file if missing, keeps the records already there, skips an entry that is already logged, and refuses to touch a file that is not a JSON array.
+- **Staying signed in.** The browser cookie lasts 30 days and survives server restarts: it is derived from a separate key saved as `browser-key` in the state folder (readable only by you). Delete that file to sign every browser out. Only a browser that has never signed in, or whose cookie expired, sees the sign-in screen; `see url` (or opening any review) fixes that.
+- **What the token protects.** The server makes a new secret token at each start and keeps it in a file only your user can read (`server.json` in the runtime folder; see `see paths`). The CLI sends it on every call, and the browser signs in through a one-time link that sets a cookie. Run `see url` to get a link. This stops other OS users on the machine, sandboxed or containerised processes that can reach `127.0.0.1` but can't read your files, and attacks from websites. It does **not** stop malware already running as you: that can read the token file, and everything else you own.
 
 ## Several outputs in one review
 
 ```
-see-plan open plan.md flow.mmd prototype.html screenshot.png results.csv
+see open plan.md flow.mmd prototype.html screenshot.png results.csv
 ```
 
-The page shows one tab per file, and the first `.html` or `.md` file is the primary. Try it with the files in `examples/multi/`. A review holds up to 12 outputs; add or take them out while it runs with `see-plan add <primary> <file...>` and `see-plan remove <primary> <output-id>`.
+The page shows one tab per file, and the first `.html` or `.md` file is the primary. Try it with the files in `examples/multi/`. A review holds up to 12 outputs; add or take them out while it runs with `see add <primary> <file...>` and `see remove <primary> <output-id>`.
 
 | Kind | Files | Notes you can leave |
 | --- | --- | --- |
@@ -222,13 +222,13 @@ Everything renders locally, with no CDN. Files over 5 MB (10 MB for images) show
 
 ## Starting the server, and running without a desktop
 
-When a command has to start the server, it opens in **its own terminal window** with a live log. Closing that window, pressing Ctrl+C or running `see-plan stop` stops it; the next command starts it again, and queued notes are kept. Inside tmux it opens as a background tmux window. Over SSH, in containers and in CI it runs hidden, logging to `server.log`.
+When a command has to start the server, it opens in **its own terminal window** with a live log. Closing that window, pressing Ctrl+C or running `see stop` stops it; the next command starts it again, and queued notes are kept. Inside tmux it opens as a background tmux window. Over SSH, in containers and in CI it runs hidden, logging to `server.log`.
 
-With no desktop, see-plan prints the URL instead of opening a browser: forward the port (`ssh -L 4388:127.0.0.1:4388 <host>`), then run `see-plan url` and open the link. Connect Claude uses a terminal window, then tmux, then shows a command to copy.
+With no desktop, see prints the URL instead of opening a browser: forward the port (`ssh -L 4388:127.0.0.1:4388 <host>`), then run `see url` and open the link. Connect Claude uses a terminal window, then tmux, then shows a command to copy.
 
 ## Error logs
 
-Run **`see-plan error-logs`** (or `--dir <path>`) to open the error-log view for the folder you are in. Bare `see-plan` in a terminal prints the same link as `error_logs`. What you see depends on where you start it:
+Run **`see error-logs`** (or `--dir <path>`) to open the error-log view for the folder you are in. Bare `see` in a terminal prints the same link as `error_logs`. What you see depends on where you start it:
 
 - **In a project folder**, meaning the nearest folder above you that has `.git`, `docs/superpowers/` or `.superpowers/` (your home folder never counts), the page (`/errors?project=<key>`) has **four tabs**.
 - **Anywhere else**, the page (`/errors`) shows **only the Sessions tab**, plus links to projects you opened before.
@@ -273,9 +273,9 @@ Every deletion creates a notification, and so does every new error. The Error lo
 
 New top-level folders: `helpers/` (shared helpers, such as the data layer) and `data/` (runtime data, not committed).
 
-## Where see-plan keeps its files
+## Where see keeps its files
 
-see-plan follows each platform's standard folders. `see-plan paths` (or `see-plan paths --json`) prints every path and the rule that chose it (`env`, `legacy` or `default`); agents should read the error log path from there instead of guessing it.
+see follows each platform's standard folders. `see paths` (or `see paths --json`) prints every path and the rule that chose it (`env`, `legacy` or `default`); agents should read the error log path from there instead of guessing it.
 
 | | Linux / other POSIX | macOS | Windows |
 | --- | --- | --- | --- |
@@ -287,9 +287,9 @@ see-plan follows each platform's standard folders. `see-plan paths` (or `see-pla
 
 On macOS, `XDG_*` variables you set explicitly win over `~/Library`. A relative `XDG_*` value is ignored.
 
-**Upgrading from 3.2 or earlier.** Older versions used `~/.my-lavish-axi` and `~/claude-errors/error-log.json`. While those exist and the new folders don't, see-plan keeps using them, so nothing is lost; bare `see-plan` then prints `legacy_paths: run see-plan migrate`. `see-plan migrate --dry-run` shows what would move; `see-plan migrate` stops the server, copies the data, checks it (the JSON parses, the session and record counts match), and renames the old ones to `*.migrated-<date>`. It never deletes them, and it refuses when the new location already has data.
+**Upgrading from 3.2 or earlier.** Older versions used `~/.my-lavish-axi` and `~/claude-errors/error-log.json`. While those exist and the new folders don't, see keeps using them, so nothing is lost; bare `see` then prints `legacy_paths: run see migrate`. `see migrate --dry-run` shows what would move; `see migrate` stops the server, copies the data, checks it (the JSON parses, the session and record counts match), and renames the old ones to `*.migrated-<date>`. It never deletes them, and it refuses when the new location already has data.
 
-**Several isolated servers** (for example one per project): give each its own `MY_LAVISH_STATE_DIR` and `MY_LAVISH_PORT`, e.g. `MY_LAVISH_STATE_DIR=~/.see-plan-work MY_LAVISH_PORT=4390 see-plan plan.md`.
+**Several isolated servers** (for example one per project): give each its own `MY_LAVISH_STATE_DIR` and `MY_LAVISH_PORT`, e.g. `MY_LAVISH_STATE_DIR=~/.see-plan-work MY_LAVISH_PORT=4390 see plan.md`.
 
 ## Environment variables
 
@@ -298,20 +298,20 @@ None are required; the defaults work out of the box. Set them only to change the
 | Variable | Default | Meaning |
 | --- | --- | --- |
 | `MY_LAVISH_PORT` | `4388` | Server port |
-| `MY_LAVISH_STATE_DIR` | platform standard; see `see-plan paths` | Holds `state.json`, `revisions/` and `feedback.jsonl`. Setting it also moves `server.log` and the runtime file `server.json` there, so an isolated server never reads another one's token |
-| `MY_LAVISH_DATA_DIR` | platform standard; see `see-plan paths` | Holds `error-log.json` |
+| `MY_LAVISH_STATE_DIR` | platform standard; see `see paths` | Holds `state.json`, `revisions/` and `feedback.jsonl`. Setting it also moves `server.log` and the runtime file `server.json` there, so an isolated server never reads another one's token |
+| `MY_LAVISH_DATA_DIR` | platform standard; see `see paths` | Holds `error-log.json` |
 | `MY_LAVISH_SERVER_WINDOW` | `auto` | `auto`, `window`, `tmux` or `hidden`: how a started server is shown |
 | `MY_LAVISH_LAUNCHER` | `auto` | `auto`, `terminal`, `tmux`, `copy` or `off`: how Connect Claude starts Claude |
 | `MY_LAVISH_TERMINAL` | unset | A JSON argv array for your terminal, such as `["wezterm","start","--","{cmd...}"]` |
 | `MY_LAVISH_ALLOWED_HOSTS` | unset | Extra exact host names for a port forwarder. The token is still required |
-| `USE_ERROR_SEARCH` | unset | `true` turns on `see-plan errors similar` and `errors store` (experimental) |
+| `USE_ERROR_SEARCH` | unset | `true` turns on `see errors similar` and `errors store` (experimental) |
 | `USE_PINECONE` | unset | `true`, with `PINECONE_API_KEY` set, stores errors in Pinecone instead of the local file and turns on error search (experimental). Error text leaves this machine |
 | `MY_LAVISH_NO_OPEN` | unset | `1` = never launch a browser (same as `--no-open`) |
 | `MY_LAVISH_IDLE_TIMEOUT_MS` | `1800000` | Server exits after this long with no WebSocket or poll connections; `0` or `off` disables |
 | `MY_LAVISH_ERROR_LOG` | `<data dir>/error-log.json` | Where the server writes logged errors (wins over `MY_LAVISH_DATA_DIR`) |
 
-Example (PowerShell): `$env:MY_LAVISH_PORT = "5000"; see-plan examples/plan.html`
-Example (bash): `MY_LAVISH_PORT=5000 see-plan examples/plan.html`
+Example (PowerShell): `$env:MY_LAVISH_PORT = "5000"; see examples/plan.html`
+Example (bash): `MY_LAVISH_PORT=5000 see examples/plan.html`
 
 ## Differences from lavish-axi
 
@@ -333,4 +333,4 @@ Built-in guidance is limited to the `design` text and five playbooks (`plan`, `d
 
 MIT. See [LICENSE](LICENSE). Release archives also include `THIRD_PARTY_LICENSES.txt` (every bundled dependency, plus Node.js, which the standalone executable embeds).
 
-**Credits:** see-plan is an independent re-implementation of the core review loop of [lavish-axi](https://github.com/kunchenguid/lavish-axi) by Kun Chen (MIT). See [NOTICE](NOTICE).
+**Credits:** see is an independent re-implementation of the core review loop of [lavish-axi](https://github.com/kunchenguid/lavish-axi) by Kun Chen (MIT). See [NOTICE](NOTICE).

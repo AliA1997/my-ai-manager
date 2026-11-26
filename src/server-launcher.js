@@ -41,11 +41,11 @@ const PS_SCRIPT = [
   // The pipe unrolls it: PowerShell 5.1 would otherwise pass the whole JSON array as one argument.
   "$a = @($env:SEE_PLAN_SERVER_ARGS | ConvertFrom-Json | ForEach-Object { $_ })",
   "& $env:SEE_PLAN_SERVER_EXE @a",
-  'if ($LASTEXITCODE -ne 0) { Read-Host "see-plan server stopped with an error (exit $LASTEXITCODE). Press Enter to close" }',
+  'if ($LASTEXITCODE -ne 0) { Read-Host "see server stopped with an error (exit $LASTEXITCODE). Press Enter to close" }',
 ].join("\n");
 
 // macOS and Linux (S6): fixed text. The command arrives as positional "$@" arguments, never spliced in.
-export const KEEP_OPEN_SH = 'printf "\\033]0;%s\\007" "$SEE_PLAN_TITLE"; "$@"; s=$?; if [ "$s" -ne 0 ]; then printf "see-plan server stopped with an error (exit %s). Press Enter to close." "$s"; read _; fi; exit "$s"';
+export const KEEP_OPEN_SH = 'printf "\\033]0;%s\\007" "$SEE_PLAN_TITLE"; "$@"; s=$?; if [ "$s" -ne 0 ]; then printf "see server stopped with an error (exit %s). Press Enter to close." "$s"; read _; fi; exit "$s"';
 
 // AppleScript reads the argv from SEE_PLAN_ARGC / SEE_PLAN_ARG_<i> and shell-quotes each item.
 const OSA_LINES = [
@@ -68,7 +68,7 @@ export function posixServerArgv({ exe, args, env, title }) {
  * Returns { command, args, env, options } or { unavailable: reason }. No shell strings anywhere.
  */
 export function buildServerLaunch({ mode, platform, exe, args, env, port, terminal = null, customTerminal = null, environment = null }) {
-  const title = `see-plan server · :${port}`;
+  const title = `see server · :${port}`;
   const childEnv = { ...env, SEE_PLAN_SERVER_MODE: mode };
   if (mode === "tmux") {
     const t = buildTmuxLaunch({ argv: posixServerArgv({ exe, args, env: childEnv, title }), name: "server", cwd: process.cwd(), socket: environment?.tmux_socket ?? null, inTmux: Boolean(environment?.tmux) });

@@ -104,7 +104,7 @@ test("poll: a server that resets the socket mid-poll is a routine reconnect (exi
   assert.equal(await run(["poll", file, "--json"], a.io), 0, a.stdout());
   const out = JSON.parse(a.stdout());
   assert.deepEqual([out.session.status, out.session.reconnect], ["waiting", true]);
-  assert.match(out.next_step, /Run `see-plan poll/);
+  assert.match(out.next_step, /Run `see poll/);
 });
 
 test("a late second server exits 0 and never overwrites server.json; an old server without auth says to stop it", async (t) => {
@@ -122,7 +122,7 @@ test("a late second server exits 0 and never overwrites server.json; an old serv
   const before = await fs.promises.readFile(path.join(dir, "server.json"), "utf8");
   const late = fakeIo(env);
   assert.equal(await run(["server"], late.io), 0);
-  assert.match(late.stderr(), /Another see-plan server is already running on :\d+; this window can be closed\./);
+  assert.match(late.stderr(), /Another see server is already running on :\d+; this window can be closed\./);
   assert.equal(await fs.promises.readFile(path.join(dir, "server.json"), "utf8"), before);
 
   const status = fakeIo(env);
@@ -138,5 +138,5 @@ test("a late second server exits 0 and never overwrites server.json; an old serv
   assert.equal(await run(["open", file, "--json"], o2.io), 1);
   const err = JSON.parse(o2.stdout());
   assert.equal(err.error.code, "SERVER_OUTDATED");
-  assert.match(err.next_step, /see-plan stop/);
+  assert.match(err.next_step, /see stop/);
 });

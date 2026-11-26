@@ -29,7 +29,7 @@ test("buildClaudeLaunch encodes the claude command", () => {
   if (process.platform === "win32") assert.ok(path.isAbsolute(l.command)); // a Windows path is only absolute on Windows
   assert.match(l.command, /System32[\\/]WindowsPowerShell[\\/]v1\.0[\\/]powershell\.exe$/);
   assert.equal(l.env.SEE_PLAN_CLAUDE, "C:\\bin\\claude.exe");
-  assert.ok(l.env.SEE_PLAN_PROMPT.startsWith("[see-plan · plan · Review] This is a see-plan review session for the file C:\\p\\plan.md. Run see-plan poll on that file (quote the path for your shell) and follow its next_step."));
+  assert.ok(l.env.SEE_PLAN_PROMPT.startsWith("[see · plan · Review] This is a see-plan review session for the file C:\\p\\plan.md. Run see poll on that file (quote the path for your shell) and follow its next_step."));
 });
 
 test("buildClaudeLaunch keeps paths out of the script", () => {
@@ -90,7 +90,7 @@ const HOSTILE = "/tmp/O'Brien\\x’; calc; ’\\$(calc)/p.md";
 
 test("the launch prompt carries the label and explains the 1:50 reconnect cycle", () => {
   const p = buildPrompt({ file: "/r/auth.plan.md", feature: "auth", stage: "interrogation" });
-  assert.ok(p.startsWith("[see-plan · auth · Interrogation] "));
+  assert.ok(p.startsWith("[see · auth · Interrogation] "));
   assert.match(p, /--stage interrogation/);
   assert.match(p, /1:50 with reconnect: true; run it again right away/);
   assert.ok(!/dangerously/.test(p));

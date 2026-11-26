@@ -59,6 +59,8 @@ for f in see-plan LICENSE NOTICE THIRD_PARTY_LICENSES.txt README.md; do
   cp -f "$TMP/unpacked/$f" "$INSTALL_DIR/"
 done
 chmod 755 "$INSTALL_DIR/see-plan"
+# `see` is the main command; `see-plan` stays as an alias.
+ln -sf see-plan "$INSTALL_DIR/see"
 
 if [ "$INSTALL_SKILL" = 1 ]; then
   mkdir -p "$HOME/.claude/skills/my-lavish"
@@ -68,7 +70,7 @@ else
   echo "Skill not installed. Re-run with --install-skill to add it to ~/.claude/skills."
 fi
 
-echo "see-plan $("$INSTALL_DIR/see-plan" --version) installed to $INSTALL_DIR."
+echo "see $("$INSTALL_DIR/see" --version) installed to $INSTALL_DIR (see-plan still works)."
 case ":$PATH:" in
   *":$INSTALL_DIR:"*) ;;
   *)
@@ -85,6 +87,6 @@ case ":$PATH:" in
 esac
 if [ -n "${WSL_DISTRO_NAME:-}" ]; then
   echo "WSL detected (${WSL_DISTRO_NAME}). Keep your projects inside WSL (for example ~/projects), not under /mnt/c: file watching is unreliable there."
-  echo "The page opens in your Windows browser. If it does not, run: see-plan url"
+  echo "The page opens in your Windows browser. If it does not, run: see url"
 fi
-echo "Next: see-plan --help"
+echo "Next: see --help"

@@ -20,7 +20,7 @@ const FIXTURES = {
   "CI on Windows": { platform: "win32", env: { CI: "true" }, gui: false, ci: true },
 };
 
-test("detectEnvironment: a table of places see-plan runs", () => {
+test("detectEnvironment: a table of places see runs", () => {
   for (const [name, f] of Object.entries(FIXTURES)) {
     const e = detectEnvironment({ env: f.env, platform: f.platform, exists: f.exists ?? none, readFile: () => "" });
     for (const k of ["gui", "remote", "container", "wsl", "tmux", "ci"]) {

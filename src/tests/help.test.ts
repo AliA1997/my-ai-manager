@@ -6,16 +6,16 @@ import { loader } from '../routes/help';
 import { renderRoute, stubFetch } from './helpers';
 
 const usage = [
-  'see-plan <file.html|file.md>  open the plan in the browser',
-  'see-plan dashboard            open the dashboard',
-  'see-plan stop',
+  'see <file.html|file.md>  open the plan in the browser',
+  'see dashboard            open the dashboard',
+  'see stop',
 ].join('\n');
 
 test('the CLI help is read as command and description', () => {
   assert.deepEqual(parseUsage(usage), [
-    { command: 'see-plan <file.html|file.md>', about: 'open the plan in the browser' },
-    { command: 'see-plan dashboard', about: 'open the dashboard' },
-    { command: 'see-plan stop', about: '' },
+    { command: 'see <file.html|file.md>', about: 'open the plan in the browser' },
+    { command: 'see dashboard', about: 'open the dashboard' },
+    { command: 'see stop', about: '' },
   ]);
 });
 
@@ -37,7 +37,7 @@ test('the Help page lists every command in a table, with the version and a way t
   try {
     const html = await renderRoute('/help');
     assert.match(html, /<h1[^>]*>Help<\/h1>/);
-    assert.ok(html.includes('see-plan dashboard') && html.includes('open the dashboard'));
+    assert.ok(html.includes('see dashboard') && html.includes('open the dashboard'));
     assert.ok(html.includes('4.2.0') && html.includes('npm start'));
     assert.ok(html.includes('&lt;file.html|file.md&gt;'), 'markup in a command stays text (SEC-4)');
     assert.ok(html.includes('scope="row"') && html.includes('scope="col"'));

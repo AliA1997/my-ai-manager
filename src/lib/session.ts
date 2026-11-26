@@ -5,7 +5,7 @@ import { STAGE_TITLES } from './home';
 
 export const SOURCE = 'my-lavish';
 export const LOG_TAG = 'claude-log';
-export const ALLOW_RULE = '"Bash(see-plan:*)"';
+export const ALLOW_RULE = '"Bash(see:*)"';
 export const STUCK_AFTER_MS = 45_000; // a launched Claude that has not polled by now needs the user's help
 export const SESSION_KEY = /^[0-9a-f]{16}$/;
 

@@ -25,7 +25,7 @@ export const ConnectionCard = memo(function ConnectionCard({
   const s = useSessionContext();
   const { state, text, buttons, launch, now } = s.connection;
   if (s.ended) return null;
-  const poll = s.page.poll_command || 'see-plan poll <file>';
+  const poll = s.page.poll_command || 'see poll <file>';
   const lastPoll = s.presence.last_poll_at;
   const title =
     lastPoll && (state === 'connected' || state === 'working')

@@ -82,7 +82,7 @@ export function snapshotFor(
       ids.push(p.output);
     }
   }
-  return ids.map((id) => `<!-- see-plan output: ${id} -->\n${snapshots[id]}`).join('\n');
+  return ids.map((id) => `<!-- see output: ${id} -->\n${snapshots[id]}`).join('\n');
 }
 
 /** Where the frame was last scrolled to, if it said so with a finite pair. */

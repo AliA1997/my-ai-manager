@@ -1004,7 +1004,7 @@ test("connect-claude returns copy mode and the launch prompt carries the label",
   });
   const body = await (await postJson(`/api/${key}/connect-claude`, {})).json();
   assert.deepEqual([body.mode, body.command], ["copy", "cd x && claude"]);
-  assert.ok(calls[0].prompt.startsWith("[see-plan · a · Review]"));
+  assert.ok(calls[0].prompt.startsWith("[see · a · Review]"));
   assert.match(calls[0].prompt, /1:50/);
   assert.equal((await postJson(`/api/${key}/connect-claude`, {})).status, 409, "cooldown");
   assert.equal((await postJson(`/api/${key}/connect-cancel`, {})).status, 403, "cancel needs the page origin");

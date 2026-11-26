@@ -6,7 +6,7 @@ const TMUX_SOCKET = /^\/[^\0\n]{1,200}$/;
 const PLATFORMS = ["win32", "darwin", "linux", "freebsd", "openbsd", "sunos", "aix"];
 
 /**
- * What kind of place see-plan runs in (H1). Pure apart from `exists` (container marker files).
+ * What kind of place see runs in (H1). Pure apart from `exists` (container marker files).
  * Returns { platform, gui, remote, container, wsl, tmux, ci, reasons[], tmux_socket }; `reasons` explain a
  * false `gui` and the other flags in words a person can act on.
  */

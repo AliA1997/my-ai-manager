@@ -14,6 +14,7 @@
   },
   "type": "module",
   "bin": {
+    "see": "bin/see-plan.js",
     "see-plan": "bin/see-plan.js"
   },
   "files": [

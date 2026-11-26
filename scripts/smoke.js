@@ -93,7 +93,7 @@ async function main(env, workDir) {
     assert((await res.text()).length > 0, `GET ${p} is empty`);
   }
 
-  // T4: `see-plan url <file>` prints a one-time sign-in link; the browser trades it for an HttpOnly cookie.
+  // T4: `see url <file>` prints a one-time sign-in link; the browser trades it for an HttpOnly cookie.
   const signIn = JSON.parse(await cli(["url", file, "--json"], env));
   const link = new URL(signIn.url);
   assert(link.pathname === "/auth" && link.searchParams.get("next") === url.pathname, `sign-in link: ${signIn.url}`);

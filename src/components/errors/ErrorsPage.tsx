@@ -169,11 +169,11 @@ function Scope({
     <div className="px-6 pt-3 text-muted">
       {unknown ? (
         <p>
-          That project isn&apos;t registered; run <code>see-plan error-logs</code> in it.
+          That project isn&apos;t registered; run <code>see error-logs</code> in it.
         </p>
       ) : null}
       <p>
-        Not in a project folder, so only recent sessions are shown. Run <code>see-plan error-logs</code> in a
+        Not in a project folder, so only recent sessions are shown. Run <code>see error-logs</code> in a
         project folder for error logs and plans.
       </p>
       {recent.length ? (
@@ -291,7 +291,9 @@ export function ErrorsPage() {
 
   return (
     <>
-      <title>{project ? `Error logs · ${project.name} · My AI Manager` : 'Recent sessions · My AI Manager'}</title>
+      <title>
+        {project ? `Error logs · ${project.name} · My AI Manager` : 'Recent sessions · My AI Manager'}
+      </title>
       <PageHeader title={title} claudeHref={claudeHref} />
       <Scope
         project={project}

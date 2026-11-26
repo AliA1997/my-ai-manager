@@ -113,7 +113,7 @@ export function HomePage() {
           </h2>
           <p className="text-muted">Everything open now, including each feature&apos;s stages.</p>
           {live.length === 0 ? (
-            <p className="text-muted">Nothing open. Ask your agent to run see-plan &lt;file&gt;.</p>
+            <p className="text-muted">Nothing open. Ask your agent to run see &lt;file&gt;.</p>
           ) : null}
           {live.map((s) => (
             <SessionCard

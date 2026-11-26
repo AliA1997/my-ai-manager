@@ -59,7 +59,7 @@ test("no shell strings: a path with spaces, quotes and $() stays one argv item o
   assert.deepEqual(JSON.parse(win.env.SEE_PLAN_SERVER_ARGS), args);
   assert.equal(win.options.detached, undefined, "DETACHED_PROCESS would have no console: Start-Process makes the window");
   assert.equal(win.options.windowsHide, true);
-  assert.equal(win.env.SEE_PLAN_TITLE, "see-plan server · :1");
+  assert.equal(win.env.SEE_PLAN_TITLE, "see server · :1");
 
   const tmux = buildServerLaunch({ mode: "tmux", platform: "linux", exe: HOSTILE, args, env: {}, port: 1, environment: { tmux: true, tmux_socket: "/tmp/t" } });
   assert.deepEqual(tmux.args.slice(0, 6), ["-S", "/tmp/t", "new-window", "-d", "-n", "see-plan-server"]);
@@ -130,9 +130,9 @@ test("console log: timestamps, banner without a sign-in link, and secrets redact
   log.banner({ version: "4.0.0", url: "http://127.0.0.1:4388/", mode: "window", rows: [{ name: "state", path: "/s", source: "default" }] });
   const text = out.join("");
   assert.ok(!text.includes(token) && !text.includes("abcdef123456") && !text.includes("deadbeef"));
-  assert.match(text, /see-plan server 4\.0\.0/);
-  assert.match(text, /run `see-plan url`/);
-  assert.match(text, /Close this window, press Ctrl\+C, or run `see-plan stop`/);
+  assert.match(text, /see server 4\.0\.0/);
+  assert.match(text, /run `see url`/);
+  assert.match(text, /Close this window, press Ctrl\+C, or run `see stop`/);
   assert.ok(!/\/auth\?/.test(text.replace("/auth?t=[redacted]", "")), "no sign-in link");
   assert.ok(mirror.join("").includes("2026-11-04T"), "the server.log mirror carries ISO times");
 });

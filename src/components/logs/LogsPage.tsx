@@ -126,7 +126,7 @@ function Transcript({ id, sessions }: { id: string; sessions: SessionItem[] }) {
       </header>
       <p className="px-6 pt-3 text-sm text-muted">
         Click an entry to log it as an error in <code>{errorLog}</code>. You can say why before it is saved.{' '}
-        <code>see-plan paths</code> shows where see-plan keeps its files.
+        <code>see paths</code> shows where see keeps its files.
       </p>
       <StatusLine message={status} isError={log.isError} />
       <main className="px-6 pb-12" aria-label="Transcript">

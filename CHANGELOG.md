@@ -12,7 +12,7 @@ Search on every list page, one navigation bar, the demo page's colours and a new
 - **Similarity search and a stage filter on the Claude logs page and the Recent sessions list,** using the local vector index. Errors and Notifications already had the shared filter. `GET /api/claude-sessions` accepts `q` and `filter`.
 
 ### Changed
-- **The app is now called Claude Manager.** The command is still `see-plan`.
+- **The app is now called Claude Manager.** The command is now **`see`**; `see-plan` still works as an alias (npm `bin` and both installers provide both).
 - **The colours match the demo page** (`examples/plan.html`), light and dark.
 
 ### Fixed

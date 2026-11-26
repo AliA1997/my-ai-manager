@@ -190,7 +190,7 @@ test("bearer and cookie both work; a wrong token of the same length is refused",
   assert.equal((await raw(port, `/api/${key}/status`, { headers: { cookie: `${COOKIE_NAME}=${cookieValueFor(createToken())}` } })).status, 401, "a cookie from another key");
   const page = await raw(port, `/session/${key}`);
   assert.equal(page.status, 401);
-  assert.match(page.text, /see-plan url/, "the 401 page says how to sign in");
+  assert.match(page.text, /see url/, "the 401 page says how to sign in");
   assert.equal((await raw(port, `/session/${key}`, { headers: { cookie } })).status, 200);
 });
 
@@ -289,7 +289,7 @@ test("the sign-in page shows the most recent session by file name only, and whet
   assert.match(page.text, /class="file">a\.html</);
   assert.ok(!page.text.includes(tmp), "the folder path is never shown");
   assert.match(page.text, /Claude is not connected/);
-  assert.match(page.text, /see-plan url/);
+  assert.match(page.text, /see url/);
 });
 
 test("a failed key save warns once without the key; a key older than 30 days is replaced", async (t) => {

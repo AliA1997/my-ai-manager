@@ -45,7 +45,7 @@ export function chromeData(session, { baseUrl, canResume = false, workflow = nul
     has_plan: Boolean(session.source_file) || Boolean(session.stage),
     revision: session.revision ?? 0,
     decision: session.decision?.value ?? null,
-    poll_command: `see-plan poll ${quoteArg(file)}${session.stage ? ` --stage ${session.stage}` : ""}`,
+    poll_command: `see poll ${quoteArg(file)}${session.stage ? ` --stage ${session.stage}` : ""}`,
     history: (session.history ?? []).map((h) => ({ ended_at: h.ended_at ?? null, ended_by: h.ended_by ?? null, chat: serializeChat(h.chat ?? []) })),
     workflow: workflowView(workflow, baseUrl ?? ""),
     artifact_base: artifactBase,
