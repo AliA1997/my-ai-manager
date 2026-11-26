@@ -50,6 +50,7 @@ jobs:
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - run: npm ci
+      - run: npm run build:app
       - run: npm run smoke
       - name: Check the headless behaviour
         run: |

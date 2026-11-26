@@ -180,7 +180,7 @@ async function errorTabs(baseUrl, workDir, stateDir) {
     for (const [i, severity] of SEVERITIES.entries()) {
       const entry = { claude_session_id: claude, uuid: `${label}-${i}`, part: 0, role: "assistant", kind: "text", at: null, text: `${label} ${severity}`, severity, reason: REASON_TEXT };
       const logged = await post("/api/claude-errors", { entry }, { origin: baseUrl });
-      assert(logged.status === "logged" && logged.severity === severity, `logged ${label} ${severity}`);
+      assert(logged.status === "logged" && logged.severity === severity, `logged ${label} ${severity}: ${JSON.stringify(logged)}`);
     }
   }
   // D9/D10: workDir is a project (a .git folder) with two superpowers plans; stateDir is not a project.

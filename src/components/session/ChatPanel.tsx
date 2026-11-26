@@ -36,7 +36,8 @@ export const ChatPanel = memo(function ChatPanel() {
       role="tabpanel"
       aria-labelledby="tab-chat"
       hidden={s.ui.tab !== 'chat'}
-      className="flex-1 overflow-auto p-3"
+      tabIndex={0}
+      className="flex-1 overflow-auto p-3 focus-visible:outline-2 focus-visible:outline-accent"
     >
       {rounds.length ? (
         <details className="mb-3">
