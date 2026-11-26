@@ -291,7 +291,7 @@ export function ErrorsPage() {
 
   return (
     <>
-      <title>{project ? `Error logs · ${project.name}` : 'Recent sessions'}</title>
+      <title>{project ? `Error logs · ${project.name} · My AI Manager` : 'Recent sessions · My AI Manager'}</title>
       <PageHeader title={title} claudeHref={claudeHref} />
       <Scope
         project={project}

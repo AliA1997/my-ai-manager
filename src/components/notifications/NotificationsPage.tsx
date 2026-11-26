@@ -187,7 +187,7 @@ export function NotificationsPage() {
 
   return (
     <>
-      <title>Notifications</title>
+      <title>Notifications · My AI Manager</title>
       <PageHeader title="Notifications" />
       <StatusLine message={message} isError={Boolean(markRead.error)} />
       <main className="px-6 pb-12">

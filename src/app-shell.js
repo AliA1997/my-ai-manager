@@ -26,6 +26,8 @@ export function createAppHtml({ baseUrl, title = "My AI Manager", errorLogFile }
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${escapeHtml(title)}</title>
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="/icon.png">
 <link rel="stylesheet" href="/app/app.css">
 <script type="module" src="/app/main.js"></script>
 </head>

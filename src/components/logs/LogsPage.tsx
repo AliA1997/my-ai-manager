@@ -92,7 +92,7 @@ function Transcript({ id, sessions }: { id: string; sessions: SessionItem[] }) {
 
   return (
     <>
-      <title>{`Claude log · ${id.slice(0, 8)}`}</title>
+      <title>{`Claude log · ${id.slice(0, 8)} · My AI Manager`}</title>
       <header className="flex flex-wrap items-end justify-between gap-4 px-6 pt-4">
         <div>
           <p className="text-xs font-medium tracking-wide text-muted uppercase">Claude session</p>
@@ -200,7 +200,7 @@ export function LogsPage() {
         <Transcript key={id} id={id} sessions={data.sessions} />
       ) : (
         <>
-          <title>Claude session logs</title>
+          <title>Claude session logs · My AI Manager</title>
           <StatusLine
             message={
               search.q || search.filter

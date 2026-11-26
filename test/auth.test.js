@@ -165,7 +165,7 @@ test("every route needs the token unless it is explicitly exempt (a new route mu
   const fill = (p) => p.replace(":key", key).replace(":project", "0123456789abcdef").replace(":id", "00000000-0000-4000-8000-000000000001").replace(":n", "0").replace(":cap", "0".repeat(32)).replace("*splat", "x");
   for (const r of routes) {
     const [method, p] = r.split(" ");
-    if (p.endsWith(".js") || p.endsWith(".css")) {
+    if (/\.(js|css|ico|png)$/.test(p)) {
       assert.equal((await raw(port, p)).status, 200, `${r} (a public file) is open`);
       continue;
     }
