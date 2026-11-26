@@ -4,6 +4,28 @@
 
 The rest of the 2026-11-03 plan (`docs/superpowers/plans/2026-11-03-logs-sessions-plans-fixes.md`, Tasks 2–4): log hand-off, session management and plan management. Its stage inference for plan folders and its Claude-session cache shipped early (0.3.0, and again in 3.2.0).
 
+## [4.3.1] - 2026-11-26
+
+The Lavish Axi design on every page, a new name, a shorter command and a UX rubric. Not breaking.
+
+### Added
+- **`see` is the main command.** `see-plan` still works as an alias; npm `bin` and both installers provide both.
+- **UX rubric** (`docs/conventions/UX-RUBRIC.md`): 30 pass/fail checks, pass at 28 or more with three gates.
+- **`npm run test:ux`** checks the rubric in the installed Chrome (never a downloaded browser) at 1440 and 390 px, light and dark, with axe. CI runs it on Ubuntu.
+- **Brand favicon** (`favicon.ico`, `icon.png`).
+
+### Changed
+- **The app is now called My AI Manager,** in the nav and every page title.
+- **Every page, the review page included, uses the Lavish Axi gradient nav** with pill links; Sign out lives only in the nav.
+- **Lavish Axi colour tokens** in light and dark mode; log entries have role colours.
+
+### Fixed
+- Accent buttons and dialogs meet text contrast; the chat panel can be scrolled by keyboard; the logs page no longer scrolls sideways at phone width.
+- CI: the headless job builds the app before smoke; timing budgets allow for slower shared runners.
+
+### Removed
+- The old server-rendered pages and their scripts and styles (`home-page.js`, `errors-page.js`, `notifications-page.js`, `logs-page.js` and their `public/` files).
+
 ## [4.3.0] - 2026-11-22
 
 Search on every list page, one navigation bar, the demo page's colours and a new name. Not breaking.
@@ -12,7 +34,7 @@ Search on every list page, one navigation bar, the demo page's colours and a new
 - **Similarity search and a stage filter on the Claude logs page and the Recent sessions list,** using the local vector index. Errors and Notifications already had the shared filter. `GET /api/claude-sessions` accepts `q` and `filter`.
 
 ### Changed
-- **The app is now called Claude Manager.** The command is now **`see`**; `see-plan` still works as an alias (npm `bin` and both installers provide both).
+- **The app is now called Claude Manager.** The command is still `see-plan`.
 - **The colours match the demo page** (`examples/plan.html`), light and dark.
 
 ### Fixed
